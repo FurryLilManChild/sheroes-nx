@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.20)
 # Switch homebrew (devkitA64 + libnx, built with switch/build.sh).
 # ============================================================================
 
-project(cod_recomp C)
+project(sheroes_recomp C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)

@@ -54,19 +54,212 @@ typedef void (*recomp_func_t)(void);
 
 /* ── Register state (defined in xbox_memory_layout.c) ──────── */
 
-/* ── Library hooks: to be relocated for XDK 5659 ─────────────
+/* ── Library hooks (XDK 5659) ─────────────────────────────────
  *
  * sheroes-nx. Sonic Heroes links XDK 1.0.5659 (CoD-nx and Burnout 3 link
- * 5849), so CoD-nx's hooks cannot be copied at its addresses. The same
- * functions have to be found in this XBE's D3D and DSOUND sections and hooked
- * here, each with its evidence. CoD-nx's src/recomp_manual.c is the
- * reference for what each hook does:
- *   - D3D BlockOnTime: register the semaphore at device+0x30 with the executor
- *   - D3D vblank and PGRAPH handlers, wrapped in d3d_isr_enter/leave
- *   - DirectSound DSP command post (the code word at scratch + 0x810)
- *   - DirectSound AC'97 channel reset (RR bit in the NABM control byte)
- *   - DirectSound per-frame DSP heartbeat (0xCCCCCC through the APU model)
- */
+ * 5849). Each hook below is CoD-nx's, moved to the same library function at
+ * this game's address. Found by reading the XBE's D3D and DSOUND sections
+ * with capstone on 2026-10-27 (kickoff); evidence with each.
+ *
+ * Not ported: CoD's per-frame DSP heartbeat (sub_003E59DE). 5659's DSOUND
+ * has no "cmp dword [eax], 0xCCCCCC" anywhere; its only 10 ms stall
+ * (push 0x2710; call KeStallExecutionProcessor at 0x00346754, in
+ * sub_00346738) is reached once, from DirectSound init sub_00346BEE. */
+
+/* ── D3D fence wait, BlockOnTime (0x0032FC10) ─────────────────
+ *
+ * Stdcall (fence at [esp+4], flags at [esp+8], ret 8), as CoD's 5849 build.
+ * Its body opens with the device from the global 0x0033BC38, then
+ * [dev+0x30] (pointer to the GPU's completion semaphore) and [dev+0x2C]
+ * (write sequence): the layout CoD's hook relies on. Called from
+ * 0x0032FE6F ("push 8; push fence"), 0x0032FF20, 0x0032FF40, 0x0032FFC0,
+ * 0x00338780. With the pushbuffer executor (RECOMP_PB_EXEC) the real
+ * semaphore is handed to it once and the original wait runs; without it the
+ * GPU is reported caught up. */
+#define SH_D3D_DEVICE_PTR 0x0033BC38u
+extern void nv2a_pb_set_semaphore_target(uint32_t guest_va);
+extern void sub_0032FC10_gen(void);
+
+void sub_0032FC10(void)
+{
+    static int exec = -1;
+    uint32_t dev = MEM32(SH_D3D_DEVICE_PTR);
+    uint32_t sem = dev ? MEM32(dev + 0x30) : 0;
+
+    if (exec < 0)
+        exec = getenv("RECOMP_PB_EXEC") != NULL;
+    if (exec) {
+        static uint32_t registered;
+        if (sem && sem != registered) {
+            nv2a_pb_set_semaphore_target(sem);
+            fprintf(stderr, "[D3D] GPU semaphore at 0x%08X\n", sem);
+            registered = sem;
+        }
+        sub_0032FC10_gen();
+        return;
+    }
+    if (sem)
+        MEM32(sem) = MEM32(dev + 0x2C);     /* "GPU" is always caught up */
+    eax = 0;
+    esp += 4 + 8;                           /* return address, fence, flags */
+}
+
+/* ── DirectSound DSP command post (0x0034175A) ───────────────
+ *
+ * CoD's sub_003E501C (Burnout 3's 0x002F7EC2), the same body: thiscall,
+ * ebx = ***(this + 8 + 0x10) is the GP DSP's scratch area, the command code
+ * goes to scratch + 0x810 and it spins until the DSP zeroes it
+ * (0x003418B7: add ebx,0x810; 0x003418BF: mov [ebx],eax; 0x003418C1:
+ * cmp [ebx],0; jne 0x003418C1). There is no DSP, so the word is registered
+ * with the runtime's completion list first. Found by searching DSOUND for
+ * the disp32 0x810 (one hit, 0x003418B9). One caller, 0x003419C7. */
+extern int xbox_ApuDspAckWord(uint32_t va);
+extern void sub_0034175A_gen(void);
+
+void sub_0034175A(void)
+{
+    uint32_t obj = MEM32(ecx + 8);
+    uint32_t blk = obj ? MEM32(obj + 0x10) : 0;
+    uint32_t scratch = blk ? MEM32(blk) : 0;
+
+    if (scratch)
+        xbox_ApuDspAckWord(scratch + 0x810);
+    sub_0034175A_gen();
+}
+
+/* ── DirectSound AC'97 channel reset (0x00346F4D) ────────────
+ *
+ * CoD's sub_003EB725 (Burnout 3's 0x002FE736). Found by searching DSOUND
+ * for the NABM control byte 0xFEC0010B (as disp32 -0x13FFEF5): it sets RR
+ * (bit 1) in the channel's control byte (0xFEC0010B + table[0x0035A1A0 +
+ * 4 * channel], 0x00346F6A) and MSVC hoisted the re-read out of the wait
+ * (0x00346F7A read once; 0x00346F83-0x00346F85 test cl,cl; jne back to the
+ * test), so with no controller it spins forever. This is the same function
+ * with the reset completing at once. Lock: the stack object's constructor
+ * 0x0033E470 (ecx = frame - 8); then 0x00346D57 (four pushes) and the
+ * destructor 0x0033E492. Callers: 0x00347035 (sub_0034700D). */
+void sub_00346F4D(void)
+{
+    uint32_t ebp_saved = g_ebp, frame, chan, nabm;
+
+    PUSH32(esp, ebp_saved);
+    frame = esp;
+    g_ebp = frame;
+    g_seh_ebp = frame;
+    esp -= 8;
+    MEM32(frame - 4) = 0;
+    PUSH32(esp, esi);
+    esi = ecx;
+    chan = esi;
+
+    ecx = frame - 8;
+    PUSH32(esp, 0x00346F61u); RECOMP_ABI_CALL(0x0033E470u, sub_0033E470);
+
+    nabm = MEM32(MEM32(chan) * 4 + 0x0035A1A0u);
+    MEM8(nabm + 0xFEC0010Bu) = 2;
+    MEM8(nabm + 0xFEC0010Bu) &= (uint8_t)~2u;   /* reset complete */
+    eax = nabm;
+    SET_LO8(ecx, 0);
+
+    MEM32(nabm + 0xFEC00100u) = MEM32(chan + 0x1C);
+    if (MEM32(chan) == 1)
+        MEM32(0xFEC0017Cu) = MEM32(chan + 0x28);
+
+    PUSH32(esp, 1);
+    PUSH32(esp, 1);
+    ecx = chan;
+    PUSH32(esp, MEM8(chan + 0x24));
+    PUSH32(esp, MEM8(chan + 0x25));
+    eax = MEM8(chan + 0x25);
+    g_ebp = frame;
+    g_seh_ebp = frame;
+    PUSH32(esp, 0x00346FB4u); RECOMP_ABI_CALL(0x00346D57u, sub_00346D57);
+
+    ecx = frame - 8;
+    g_ebp = frame;
+    g_seh_ebp = frame;
+    PUSH32(esp, 0x00346FBCu); RECOMP_ABI_CALL(0x0033E492u, sub_0033E492);
+
+    POP32(esp, esi);
+    esp = frame;
+    POP32(esp, ebp_saved);
+    g_ebp = ebp_saved;
+    esp += 4;
+}
+
+/* ── D3D vblank and PGRAPH handlers (0x003324D0, 0x00332A40) ──
+ *
+ * CoD's hooks for its 0x003C1C40 / 0x003C21B0 (Burnout 3's 0x00356DA0 /
+ * 0x00357000). D3D's init sub_00333334 calls KeInitializeDpc (0x0033334B)
+ * with the DPC 0x00332C80 and KeInitializeInterrupt (0x003333D3) with the
+ * routine 0x003322D0 on vector 3. The DPC reads PMC_INTR ([edi+0x100]) and
+ * calls the PGRAPH handler 0x00332A40 (bit 0x1000) and the vblank handler
+ * 0x003324D0 (bit 0x1000000), both thiscall with ecx = the block whose +0
+ * is the register base and +0x1BC / +0x1C0 the flip retire index and vblank
+ * count (the same offsets appear in 0x003322A2-0x003325B0). Both run at
+ * DISPATCH_LEVEL so they cannot interleave with D3D's own busy-waits; the
+ * PGRAPH handler takes the executor's trap under its lock; retired flips go
+ * to the executor's FLIP_STALL. */
+extern uint8_t xbox_KfRaiseIrql(uint8_t irql);
+extern void xbox_KfLowerIrql(uint8_t irql);
+extern uint8_t xbox_CurrentIrql(void);
+extern int xbox_gil_suspend(void);
+extern void xbox_gil_resume(int depth);
+extern void xbox_Nv2aVblankTaken(void);
+extern void nv2a_pb_flip_retired(unsigned n);
+extern void nv2a_pb_trap_lock(void);
+extern void nv2a_pb_trap_unlock(void);
+extern void nv2a_pb_trap_taken(void);
+extern void sub_003324D0_gen(void);
+extern void sub_00332A40_gen(void);
+
+static uint8_t d3d_isr_enter(void)
+{
+    uint8_t old = xbox_CurrentIrql();
+
+    if (old < 2) {
+        int d = xbox_gil_suspend();
+        old = xbox_KfRaiseIrql(2);
+        xbox_gil_resume(d);
+    }
+    return old;
+}
+
+static void d3d_isr_leave(uint8_t old)
+{
+    if (old < 2)
+        xbox_KfLowerIrql(old);
+}
+
+void sub_003324D0(void)
+{
+    uint32_t blk = ecx;
+    uint8_t old = d3d_isr_enter();
+    uint32_t head = MEM32(blk + 0x1BC);
+
+    xbox_Nv2aVblankTaken();
+    sub_003324D0_gen();
+    nv2a_pb_flip_retired(MEM32(blk + 0x1BC) - head);
+    d3d_isr_leave(old);
+}
+
+void sub_00332A40(void)
+{
+    volatile uint32_t *nv = (volatile uint32_t *)XBOX_PTR(0xFD000000u);
+    uint32_t blk = ecx;
+    uint8_t old = d3d_isr_enter();
+    uint32_t head = MEM32(blk + 0x1BC);
+    uint32_t nsource;
+
+    nv2a_pb_trap_lock();
+    nsource = nv[0x400108 / 4];
+    sub_00332A40_gen();
+    nv2a_pb_flip_retired(MEM32(blk + 0x1BC) - head);
+    if (nsource)
+        nv2a_pb_trap_taken();
+    nv2a_pb_trap_unlock();
+    d3d_isr_leave(old);
+}
 
 /* ── Manual function overrides ─────────────────────────────── */
 

@@ -90,7 +90,7 @@ ninja -C "$BUILD" -j"$JOBS"
 
 DEST="$SD/switch/sheroes"
 mkdir -p "$DEST"
-cp "$BUILD/cod_recomp.nro" "$DEST/$NRO_NAME"
+cp "$BUILD/sheroes_recomp.nro" "$DEST/$NRO_NAME"
 if [ "${STAGE_GAME:-0}" = "1" ]; then
     [ -f "$GAME/default.xbe" ] || fail "no extracted disc in $GAME"
     # The disc is 2.9 GB: copy only what changed.

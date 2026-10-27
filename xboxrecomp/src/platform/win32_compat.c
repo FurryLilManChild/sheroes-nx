@@ -1157,6 +1157,23 @@ DWORD SuspendThread(HANDLE h)
     return prev;
 }
 
+/* sheroes-nx: a thread that suspends itself (SuspendThread on its own handle)
+ * really stops on Windows and runs again at the next ResumeThread. Sonic
+ * Heroes' CRI server thread works that way: one unit of work, then
+ * NtSuspendThread(self), resumed once a frame. Here SuspendThread only counts,
+ * so that thread spun (2.4 million suspends in a 3-minute run) and starved the
+ * loader. The kernel calls this after SuspendThread(self), with the guest lock
+ * released: it waits until ResumeThread brings the count back to 0. */
+void w32_wait_while_suspended(HANDLE h)
+{
+    w32_object *o = obj_from(h);
+    if (!o || o->kind != K_THREAD) return;
+    pthread_mutex_lock(&o->lock);
+    while (o->suspend_count > 0)
+        pthread_cond_wait(&o->gate, &o->lock);
+    pthread_mutex_unlock(&o->lock);
+}
+
 BOOL TerminateThread(HANDLE h, DWORD exitCode)
 {
     w32_object *o = obj_from(h);

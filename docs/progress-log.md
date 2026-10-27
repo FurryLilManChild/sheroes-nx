@@ -1,5 +1,21 @@
 # Progress log (newest first)
 
+## 2026-10-27: self-suspending threads, the heap, the main menu on Linux
+
+- Loading never finished (the attract demo sat on NOW LOADING). gdb: a thread looping in sub_002ED700 calling
+  sub_0027B5B9, XAPI's SuspendThread (NtSuspendThread, ordinal 231) on its own handle: CRI's server thread does one
+  unit of work, then suspends itself until it is resumed the next frame. The POSIX SuspendThread only counted, so the
+  thread spun (2.4 million suspends in a 3-minute run) and starved everything else. Now a self-suspend blocks on the
+  thread's gate with the guest lock released until ResumeThread brings the count to 0 (`w32_wait_while_suspended`,
+  xbox_NtSuspendThread; Linux and the Switch, Windows was already right).
+- Run 5 with that: SEGA, Sonic Team, Sofdec/ADX and Dolby logos, the real title screen, Press START, the save prompt
+  (Game Data created), Main Menu, 1P Play, Story, team select (all twelve models). Known: some letters are missing in
+  the message boxes ("_ease _ress _ button").
+- Picking Team Sonic: `xbox_HeapAlloc: out of memory (requested 8431088, used 46362624/50855936)` loading
+  event0000.scr, then a null call and the staff roll, then a crash. Thread stacks already come from the heap, so the
+  8 MB stack block (main stack plus two runtime worker slices) is now 2 MB and the heap 54.5 MB (a real Xbox leaves
+  about 55 MB above this 7.5 MB image).
+
 ## 2026-10-27: Linux boots to the title screen, the Switch toolchain
 
 - Linux run 1: about 8,600 lines, then a crash after seven failed indirect calls. `tools/seed_sweep.py` (new) does

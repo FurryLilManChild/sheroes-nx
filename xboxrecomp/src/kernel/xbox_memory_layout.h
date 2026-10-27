@@ -383,7 +383,14 @@ typedef union RecompXmm {
 } RecompXmm;
 #endif
 
-#define XBOX_STACK_SIZE     (8 * 1024 * 1024)
+/* sheroes-nx: 2 MB, was 8. Thread stacks come from the heap
+ * (xbox_AllocThreadStack); this block holds only the main stack (the top
+ * 1 MB) and the runtime's worker slices (the timer and the USB ISR use two).
+ * Sonic Heroes asked for 8.4 MB for the story's first event with 46.4 of its
+ * 48.5 MB heap in use and fell to the staff roll; a real Xbox leaves a title
+ * about 55 MB above a 7.5 MB image, and the 6 MB given back puts the heap at
+ * 54.5 MB. */
+#define XBOX_STACK_SIZE     (2 * 1024 * 1024)
 
 /** Base VA of the stack area (above last XBE section). */
 /* Where the fake TIB lives -- the linear address fs: is based at.
@@ -453,7 +460,7 @@ extern uint32_t g_xbox_stack_base;
  */
 #define XBOX_WORKER_STACK_SIZE   (256 * 1024)
 #define XBOX_WORKER_STACK_BASE   XBOX_STACK_BASE             /* 0x00780000 */
-#define XBOX_WORKER_STACK_COUNT  16                          /* 4 MB total */
+#define XBOX_WORKER_STACK_COUNT  4                           /* sheroes-nx: 1 MB (was 16, 4 MB) */
 #define XBOX_WORKER_STACK_END    (XBOX_WORKER_STACK_BASE + \
                                   XBOX_WORKER_STACK_SIZE * XBOX_WORKER_STACK_COUNT)
 

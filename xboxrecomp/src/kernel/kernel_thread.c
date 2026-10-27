@@ -410,6 +410,25 @@ NTSTATUS __stdcall xbox_NtSuspendThread(
     KThreadSlot *k = tid != GetCurrentThreadId() ? kbusy_slot(tid, 0) : NULL;
     ULONGLONG give_up = GetTickCount64() + 100;
 
+#ifndef _WIN32
+    /* sheroes-nx: a thread suspending itself blocks until it is resumed, as on
+     * the Xbox (see w32_wait_while_suspended), with the guest lock released. */
+    if (tid == GetCurrentThreadId()) {
+        extern int xbox_gil_suspend(void);
+        extern void xbox_gil_resume(int depth);
+        int d;
+        prev = SuspendThread(ThreadHandle);
+        if (prev == (DWORD)-1)
+            return STATUS_UNSUCCESSFUL;
+        d = xbox_gil_suspend();
+        w32_wait_while_suspended(ThreadHandle);
+        xbox_gil_resume(d);
+        if (PreviousSuspendCount)
+            *PreviousSuspendCount = (ULONG)prev;
+        return STATUS_SUCCESS;
+    }
+#endif
+
     /*
      * SuspendThread returns the previous suspend count, or (DWORD)-1 on
      * failure. The Xbox call reports that count through an out-parameter, so

@@ -162,6 +162,7 @@ VOID   ExitThread(DWORD exitCode);
 BOOL   GetExitCodeThread(HANDLE h, LPDWORD exitCode);
 DWORD  ResumeThread(HANDLE h);
 DWORD  SuspendThread(HANDLE h);
+void   w32_wait_while_suspended(HANDLE h);   /* sheroes-nx: self-suspend */
 BOOL   TerminateThread(HANDLE h, DWORD exitCode);
 DWORD  GetCurrentThreadId(void);
 DWORD  GetThreadId(HANDLE Thread);

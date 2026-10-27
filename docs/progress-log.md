@@ -1,5 +1,21 @@
 # Progress log (newest first)
 
+## 2026-10-27: Linux boots to the title screen, the Switch toolchain
+
+- Linux run 1: about 8,600 lines, then a crash after seven failed indirect calls. `tools/seed_sweep.py` (new) does
+  the skill's sweeps plus two more found here: the crash log's failed targets; uncovered code right after a ret with
+  no padding; library-section gaps; 16-byte-aligned code right after int3 padding (the static pass merged across the
+  padding: one "function" ran 0x001F4EE0 to 0x001F6A20); pointers in .rdata/.data (vtables) to code after padding.
+  103 seeds, then 57 more after run 2 (160 in all), each with its evidence.
+- Run 2: the Sonic Team logo, then the attract demo loading Seaside Hill (the movies were not copied to the cloud), then
+  black, with five new failed indirect calls (one 266,000 times). Run 3, with all 160 seeds: no failed indirect calls;
+  the Sonic Team logo, the title screen ("Press START"), the attract demo loading Seaside Hill.
+- `timeout` alone does not stop the Linux build (it ignores SIGTERM): use `timeout -s KILL`.
+- Switch toolchain on this cloud machine: Mark's C:\devkitPro (devkitA64, libnx, portlibs/switch, cmake, tools;
+  537 MB) through the bridge, `setup_switch_wine.sh`; NVK from ghcr.io/danfromtico/switch-dev-legacy-vulkan (layer
+  with libvulkan.a; libexpat.a and libzstd.a from another layer); glslang 15.4.0 built with the Switch toolchain into
+  /opt/glslang-switch.
+
 ## 2026-10-27: first regen, the XDK 5659 hooks
 
 - First regen (tools/regen.sh, 4 min on 2 cores): 22,527 functions, 0 failed, 2.57 million lines of C in 91 files;

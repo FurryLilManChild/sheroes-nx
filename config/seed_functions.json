@@ -1,1 +1,642 @@
-[]
+[
+ {
+  "start": "0x00013E20",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x545ee0]; test eax, eax'"
+ },
+ {
+  "start": "0x00014280",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'cmp byte ptr [ecx + 0x29], 6; jne 0x1428a'"
+ },
+ {
+  "start": "0x00014F10",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov ecx, dword ptr [0x548714]; test ecx, ecx'"
+ },
+ {
+  "start": "0x00016AA0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov al, byte ptr [ecx + 5]; mov byte ptr [ecx + 4], al'"
+ },
+ {
+  "start": "0x00019910",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; mov eax, dword ptr [ecx]'"
+ },
+ {
+  "start": "0x0002B590",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'cmp dword ptr [0x54da2c], ecx; mov eax, 0x246b'"
+ },
+ {
+  "start": "0x0002B620",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'cmp dword ptr [0x54da2c], ecx; mov eax, 0x248c'"
+ },
+ {
+  "start": "0x000308C0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'push ecx; mov edx, dword ptr [esp + 8]'"
+ },
+ {
+  "start": "0x000377C0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov eax, ecx; mov dword ptr [eax], 0x38a364'"
+ },
+ {
+  "start": "0x00038490",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x0003E210",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx], 0x38ab90; jmp 0x3b920'"
+ },
+ {
+  "start": "0x00042C40",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov edx, dword ptr [esp + 8]; mov ecx, dword ptr [edx]'"
+ },
+ {
+  "start": "0x000450F0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'movsx eax, byte ptr [esp + 4]; mov ecx, dword ptr [ecx + eax*4]'"
+ },
+ {
+  "start": "0x00045700",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'movsx eax, byte ptr [esp + 4]; mov ecx, dword ptr [ecx + eax*4]'"
+ },
+ {
+  "start": "0x000496D0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; fld dword ptr [ecx]'"
+ },
+ {
+  "start": "0x0004F8D0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'xor eax, eax; ret 0x10'"
+ },
+ {
+  "start": "0x000539C0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'test dword ptr [ecx + 8], 0x20000; je 0x539cd'"
+ },
+ {
+  "start": "0x000539D0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'test dword ptr [ecx + 8], 0x10000; je 0x53a10'"
+ },
+ {
+  "start": "0x00056E20",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push eax'"
+ },
+ {
+  "start": "0x0005C460",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'and ah, al; add eax, 0x5c42000'"
+ },
+ {
+  "start": "0x0005EC00",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; mov ecx, dword ptr [eax + 4]'"
+ },
+ {
+  "start": "0x000640C0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'push eax; push 0x64090'"
+ },
+ {
+  "start": "0x0006A8B0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; sub esp, 0x10'"
+ },
+ {
+  "start": "0x0006C290",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'cmp al, dl; push es'"
+ },
+ {
+  "start": "0x0006EF80",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [ecx + 0xc]; test eax, eax'"
+ },
+ {
+  "start": "0x0007A970",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'movss xmm0, dword ptr [ecx + 0x34]; addss xmm0, dword ptr [0x386afc]'"
+ },
+ {
+  "start": "0x0007DB50",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, 0x3dd130; call 0x1b6b0'"
+ },
+ {
+  "start": "0x0008FC30",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'xor eax, eax; push esi'"
+ },
+ {
+  "start": "0x00092360",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'and ecx, dword ptr es:[ecx]; add byte ptr [edx], ch'"
+ },
+ {
+  "start": "0x0009F630",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov eax, dword ptr [0x59a490]; sub esp, 0x20'"
+ },
+ {
+  "start": "0x000A5F10",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx], 0x393a88; mov dword ptr [ecx + 0xd8], 0'"
+ },
+ {
+  "start": "0x000B4240",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x000B4C70",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; mov edx, eax'"
+ },
+ {
+  "start": "0x000D4240",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'push eax; push 0xd4220'"
+ },
+ {
+  "start": "0x000D4250",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov eax, dword ptr [0x558b7c]; mov eax, dword ptr [eax + 0x8c18]'"
+ },
+ {
+  "start": "0x000F1930",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push ebx'"
+ },
+ {
+  "start": "0x000F9810",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 8]; push esi'"
+ },
+ {
+  "start": "0x001291D0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov eax, dword ptr [ecx + 0x5c]; cmp eax, -1'"
+ },
+ {
+  "start": "0x0012C3E0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'sub al, bl; adc al, byte ptr [eax]'"
+ },
+ {
+  "start": "0x0012D820",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx + 4], 1; ret'"
+ },
+ {
+  "start": "0x00137080",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push eax'"
+ },
+ {
+  "start": "0x001392B0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'movsx ax, byte ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x0013A320",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 8]; push 0'"
+ },
+ {
+  "start": "0x0013FB00",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'cmp dword ptr [esp + 4], 1; push esi'"
+ },
+ {
+  "start": "0x00149E90",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'add dword ptr [ecx + 4], 0x400; jmp 0x149d00'"
+ },
+ {
+  "start": "0x0014C5A0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x3dd160]; push esi'"
+ },
+ {
+  "start": "0x0014C600",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x3dd160]; push esi'"
+ },
+ {
+  "start": "0x001516C0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; mov dword ptr [ecx + 0xc], eax'"
+ },
+ {
+  "start": "0x00156380",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; mov edx, dword ptr [eax]'"
+ },
+ {
+  "start": "0x00157830",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; add ecx, 0x58'"
+ },
+ {
+  "start": "0x00158710",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov edx, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x0015AAD0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'fld dword ptr [ecx + 0x16c]; fsin'"
+ },
+ {
+  "start": "0x00162AB0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; mov dword ptr [ecx + 0xe8], eax'"
+ },
+ {
+  "start": "0x00165680",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx], 1; mov dword ptr [ecx + 4], 1'"
+ },
+ {
+  "start": "0x00178230",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x5e1778]; and byte ptr [eax], 0xfe'"
+ },
+ {
+  "start": "0x0017CD30",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'or dword ptr [ecx + 0x2c], 4; ret'"
+ },
+ {
+  "start": "0x0017CFA0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'xor eax, eax; mov dword ptr [0x5e1788], eax'"
+ },
+ {
+  "start": "0x0018B490",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x5e17f4]; test eax, eax'"
+ },
+ {
+  "start": "0x0018DE00",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'xorps xmm0, xmm0; mov eax, ecx'"
+ },
+ {
+  "start": "0x001926F0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov eax, dword ptr [ecx + 0x130]; test eax, eax'"
+ },
+ {
+  "start": "0x001968C0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'push eax; push 0x1968a0'"
+ },
+ {
+  "start": "0x0019D910",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x548764]; push esi'"
+ },
+ {
+  "start": "0x0019D990",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'push eax; push 0x19d970'"
+ },
+ {
+  "start": "0x001A2D70",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; mov edx, dword ptr [ecx]'"
+ },
+ {
+  "start": "0x001D5750",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [0x5456d8]; push esi'"
+ },
+ {
+  "start": "0x001D5FE0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov edx, ecx; push edi'"
+ },
+ {
+  "start": "0x001D8410",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'xor eax, eax; mov ecx, dword ptr [eax*4 + 0x5e1d40]'"
+ },
+ {
+  "start": "0x001D8960",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x001D9490",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; xor dl, dl'"
+ },
+ {
+  "start": "0x00208170",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'xorps xmm0, xmm0; movss xmm1, dword ptr [0x3c77cc]'"
+ },
+ {
+  "start": "0x0020A870",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx], 0x3c78fc; jmp 0x19420'"
+ },
+ {
+  "start": "0x002106E0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; cmp eax, -1'"
+ },
+ {
+  "start": "0x0022A100",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'movss xmm0, dword ptr [ecx + 0xc]; addss xmm0, dword ptr [ecx]'"
+ },
+ {
+  "start": "0x002397D0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x00242D90",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx + 0xe8], 1; ret'"
+ },
+ {
+  "start": "0x002446D0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, 1; ret'"
+ },
+ {
+  "start": "0x00247550",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx], 0x3cb538; jmp 0x19420'"
+ },
+ {
+  "start": "0x0024D430",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'push ecx; push esi'"
+ },
+ {
+  "start": "0x0024D510",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esi + 0x38]; test eax, eax'"
+ },
+ {
+  "start": "0x0025AD30",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, 0x54d820; call 0x2adc0'"
+ },
+ {
+  "start": "0x00268A60",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; mov eax, dword ptr [ecx]'"
+ },
+ {
+  "start": "0x0026A480",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x606b9c]; mov eax, dword ptr [eax]'"
+ },
+ {
+  "start": "0x002705A0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [0x5456d8]; push esi'"
+ },
+ {
+  "start": "0x002B6E20",
+  "note": "seed_sweep.py [log] 2026-10-27: '[ICALL] Failed to resolve VA 0x002B6E20' in run1.log; not inside any known function; starts 'mov eax, dword ptr [0x632898]; sub esp, 8'"
+ },
+ {
+  "start": "0x00323F12",
+  "note": "seed_sweep.py [log] 2026-10-27: '[ICALL] Failed to resolve VA 0x00323F12' in run1.log; inside sub_00323F08; starts 'push 0xc; push 0x3db760'"
+ },
+ {
+  "start": "0x003273E0",
+  "note": "seed_sweep.py [ret] 2026-10-27: .text: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'inc ebp; jae 0x327415'"
+ },
+ {
+  "start": "0x0032DF10",
+  "note": "seed_sweep.py [log] 2026-10-27: '[ICALL] Failed to resolve VA 0x0032DF10' in run1.log; not inside any known function; starts 'mov edx, dword ptr [0x33b798]; or edx, 0x200'"
+ },
+ {
+  "start": "0x0032ED70",
+  "note": "seed_sweep.py [log] 2026-10-27: '[ICALL] Failed to resolve VA 0x0032ED70' in run1.log; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x00332710",
+  "note": "seed_sweep.py [ret] 2026-10-27: D3D: follows a ret with no padding, 16-byte aligned, its address appears in the image; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; mov edx, dword ptr [0x33b788]'"
+ },
+ {
+  "start": "0x00365BAB",
+  "note": "seed_sweep.py [gap] 2026-10-27: XGRPH: right after the end of sub_00365B10, no function starts there; not inside any known function; starts 'mov dword ptr [ecx], 0x3db64c; mov ecx, dword ptr [ecx + 4]'"
+ },
+ {
+  "start": "0x003676F2",
+  "note": "seed_sweep.py [gap] 2026-10-27: XGRPH: right after the end of sub_003676CB, no function starts there; not inside any known function; starts 'mov dword ptr [ecx], 0x3db658; ret'"
+ },
+ {
+  "start": "0x00367873",
+  "note": "seed_sweep.py [gap] 2026-10-27: XGRPH: right after the end of sub_0036784C, no function starts there; not inside any known function; starts 'mov dword ptr [ecx], 0x3db65c; ret'"
+ },
+ {
+  "start": "0x00369C28",
+  "note": "seed_sweep.py [gap] 2026-10-27: XGRPH: right after the end of sub_00369B7E, no function starts there; not inside any known function; starts 'mov dword ptr [ecx], 0x3db680; jmp 0x3694b4'"
+ },
+ {
+  "start": "0x00369C50",
+  "note": "seed_sweep.py [ret] 2026-10-27: XGRPH: follows a ret with no padding, 16-byte aligned; not inside any known function; starts 'mov dword ptr [ecx], 0x3db698; jmp 0x3695a4'"
+ },
+ {
+  "start": "0x0036BB97",
+  "note": "seed_sweep.py [gap] 2026-10-27: XGRPH: right after the end of sub_0036BB7F, no function starts there; not inside any known function; starts 'mov dword ptr [ecx], 0x3db6d0; push ecx'"
+ },
+ {
+  "start": "0x0037AF64",
+  "note": "seed_sweep.py [gap] 2026-10-27: XGRPH: right after the end of sub_0037AF40, no function starts there; not inside any known function; starts 'mov ecx, dword ptr [ecx + 0xc]; test ecx, ecx'"
+ },
+ {
+  "start": "0x0037EE3C",
+  "note": "seed_sweep.py [log] 2026-10-27: '[ICALL] Failed to resolve VA 0x0037EE3C' in run1.log; not inside any known function; starts 'push ebp; mov ebp, esp'"
+ },
+ {
+  "start": "0x0037F67A",
+  "note": "seed_sweep.py [log] 2026-10-27: '[ICALL] Failed to resolve VA 0x0037F67A' in run1.log; not inside any known function; starts 'xor eax, eax; cmp byte ptr [0x37eca8], al'"
+ },
+ {
+  "start": "0x0037FD9C",
+  "note": "seed_sweep.py [gap] 2026-10-27: XPP: right after the end of sub_0037FD82, no function starts there; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x00382BEC",
+  "note": "seed_sweep.py [gap] 2026-10-27: XPP: right after the end of sub_00382B62, no function starts there; not inside any known function; starts 'mov eax, ecx; mov ecx, dword ptr [eax + 0x66]'"
+ },
+ {
+  "start": "0x00383021",
+  "note": "seed_sweep.py [gap] 2026-10-27: XPP: right after the end of sub_00382F96, no function starts there; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x00383640",
+  "note": "seed_sweep.py [log] 2026-10-27: '[ICALL] Failed to resolve VA 0x00383640' in run1.log; not inside any known function; starts 'mov ax, word ptr [0x6115b2]; push ebx'"
+ },
+ {
+  "start": "0x00384481",
+  "note": "seed_sweep.py [gap] 2026-10-27: XPP: right after the end of sub_0038435B, no function starts there; not inside any known function; starts 'mov ax, word ptr [0x611712]; push ebx'"
+ },
+ {
+  "start": "0x00016120",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_000160DA; starts 'mov eax, dword ptr [esp + 4]; push eax'"
+ },
+ {
+  "start": "0x000485F0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_000484E0; starts 'mov ecx, dword ptr [esp + 8]; mov edx, dword ptr [esp + 4]'"
+ },
+ {
+  "start": "0x0004F850",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; movzx edx, byte ptr [eax + 0x18]'"
+ },
+ {
+  "start": "0x00060530",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; add eax, 3'"
+ },
+ {
+  "start": "0x00068810",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov esi, dword ptr [esp + 0xc]'"
+ },
+ {
+  "start": "0x00070970",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0007093A; starts 'sub esp, 0x54; push ebx'"
+ },
+ {
+  "start": "0x000713A0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov esi, ecx'"
+ },
+ {
+  "start": "0x00074100",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_000740D6; starts 'mov eax, dword ptr [0x59a490]; movsx eax, byte ptr [eax + 0x13]'"
+ },
+ {
+  "start": "0x00078410",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov eax, 0xc; mov dword ptr [ecx + 0x40], eax'"
+ },
+ {
+  "start": "0x00088C20",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov esi, ecx'"
+ },
+ {
+  "start": "0x00089420",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x59a490]; sub esp, 0x28'"
+ },
+ {
+  "start": "0x0009DE30",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0009DDF6; starts 'push ecx; mov ecx, dword ptr [ecx + 0x14]'"
+ },
+ {
+  "start": "0x000B43A0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; push edi'"
+ },
+ {
+  "start": "0x000FE0E0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_000FE0BA; starts 'mov eax, dword ptr [ecx + 0x2c]; mov edx, dword ptr [eax + 0x2c]'"
+ },
+ {
+  "start": "0x0010F5B0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0010F592; starts 'mov eax, dword ptr [esp + 4]; cmp eax, 3'"
+ },
+ {
+  "start": "0x00121220",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [0x59a490]; sub esp, 0x2c'"
+ },
+ {
+  "start": "0x0012A310",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0012A2EA; starts 'mov eax, dword ptr [ecx + 0x2c]; mov edx, dword ptr [eax + 0x2c]'"
+ },
+ {
+  "start": "0x0012C860",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0012C83A; starts 'mov eax, dword ptr [ecx + 0x2c]; mov edx, dword ptr [eax + 0x2c]'"
+ },
+ {
+  "start": "0x00146A80",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov esi, ecx'"
+ },
+ {
+  "start": "0x00151210",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00151207; starts 'mov eax, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x001568D0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov esi, ecx'"
+ },
+ {
+  "start": "0x0015DD50",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push 0; call 0x15d560'"
+ },
+ {
+  "start": "0x00162360",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov dword ptr [0x5e114c], 0'"
+ },
+ {
+  "start": "0x0018D340",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0018D322; starts 'mov eax, ecx; mov ecx, dword ptr [0x548744]'"
+ },
+ {
+  "start": "0x00197A40",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00197A1E; starts 'push esi; mov esi, ecx'"
+ },
+ {
+  "start": "0x001AF6E0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_001AF69A; starts 'mov eax, dword ptr [esp + 4]; mov ecx, dword ptr [eax*4 + 0x5e1eb0]'"
+ },
+ {
+  "start": "0x001D5160",
+  "note": "seed_sweep.py [log] 2026-10-27 (run2): '[ICALL] Failed to resolve VA 0x001D5160' in run2.log; not inside any known function; starts 'mov eax, dword ptr [0x59a490]; sub esp, 0xc'"
+ },
+ {
+  "start": "0x001D6AB0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov esi, ecx'"
+ },
+ {
+  "start": "0x001D7F40",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_001D7D80; starts 'push ebx; mov ebx, ecx'"
+ },
+ {
+  "start": "0x001DC200",
+  "note": "seed_sweep.py [log] 2026-10-27 (run2): '[ICALL] Failed to resolve VA 0x001DC200' in run2.log; not inside any known function; starts 'sub esp, 0x1c; push esi'"
+ },
+ {
+  "start": "0x001E4E80",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'xor eax, eax; ret 0x10'"
+ },
+ {
+  "start": "0x001F07C0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_001F072E; starts 'sub esp, 0x18; push esi'"
+ },
+ {
+  "start": "0x001F52A0",
+  "note": "seed_sweep.py [log] 2026-10-27 (run2): '[ICALL] Failed to resolve VA 0x001F52A0' in run2.log; inside sub_001F4EE0; starts 'sub esp, 0x58; push ebp'"
+ },
+ {
+  "start": "0x001F6610",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_001F4EE0; starts 'sub esp, 0x38; push ebp'"
+ },
+ {
+  "start": "0x001FD2A0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_001FD080; starts 'sub esp, 0xc; push esi'"
+ },
+ {
+  "start": "0x00204CD0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; mov esi, ecx'"
+ },
+ {
+  "start": "0x002167E0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [0x5456d8]; push 0x348'"
+ },
+ {
+  "start": "0x0021A780",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [0x5456d8]; push 0x320'"
+ },
+ {
+  "start": "0x00225810",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_002257AE; starts 'mov ecx, dword ptr [0x5456d8]; push 0x330'"
+ },
+ {
+  "start": "0x00227100",
+  "note": "seed_sweep.py [log] 2026-10-27 (run2): '[ICALL] Failed to resolve VA 0x00227100' in run2.log; not inside any known function; starts 'mov edx, dword ptr [ecx + 0x188]; or edx, 0x200'"
+ },
+ {
+  "start": "0x0022CC20",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0022CAD0; starts 'mov ecx, dword ptr [0x5456d8]; push 0x58c'"
+ },
+ {
+  "start": "0x00241D70",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00241C9E; starts 'mov ecx, dword ptr [0x5456d8]; push 0x378'"
+ },
+ {
+  "start": "0x00243860",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 4]; push esi'"
+ },
+ {
+  "start": "0x00248F80",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00248F5A; starts 'mov eax, dword ptr [0x3dc754]; imul eax, eax, 0x4c'"
+ },
+ {
+  "start": "0x0024A9A0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; push edi'"
+ },
+ {
+  "start": "0x00251F80",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov eax, dword ptr [esp + 0x10]; mov edx, dword ptr [esp + 8]'"
+ },
+ {
+  "start": "0x0025ACF0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'push esi; push edi'"
+ },
+ {
+  "start": "0x002624F0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [esp + 4]; mov eax, 0x5e7dc8'"
+ },
+ {
+  "start": "0x00269860",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00269790; starts 'xor eax, eax; xor ecx, ecx'"
+ },
+ {
+  "start": "0x00272110",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00271F40; starts 'mov eax, dword ptr [0x60e404]; test eax, eax'"
+ },
+ {
+  "start": "0x0027C230",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0027C12C; starts 'push ecx; sub esp, 0x10'"
+ },
+ {
+  "start": "0x002A16B0",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_002A1320; starts 'push ebx; add byte ptr [ebx], ah'"
+ },
+ {
+  "start": "0x002BA590",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'sub esp, 8; push ebx'"
+ },
+ {
+  "start": "0x002D56D0",
+  "note": "seed_sweep.py [log] 2026-10-27 (run2): '[ICALL] Failed to resolve VA 0x002D56D0' in run2.log; not inside any known function; starts 'jmp dword ptr [0x638380]; int3'"
+ },
+ {
+  "start": "0x0031A580",
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'sub esp, 8; mov ecx, dword ptr [esp + 0xc]'"
+ },
+ {
+  "start": "0x00369C5B",
+  "note": "seed_sweep.py [gap] 2026-10-27 (run2): XGRPH: right after the end of sub_00369C50, no function starts there; not inside any known function; starts 'mov dword ptr [ecx], 0x3db664; jmp 0x36964e'"
+ },
+ {
+  "start": "0x00382C3E",
+  "note": "seed_sweep.py [gap] 2026-10-27 (run2): XPP: right after the end of sub_00382BEC, no function starts there; not inside any known function; starts 'mov eax, ecx; mov ecx, dword ptr [eax + 0x66]'"
+ }
+]

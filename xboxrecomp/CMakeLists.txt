@@ -76,12 +76,11 @@ add_subdirectory(src/video)
 
 # Renderer for the pushbuffer executor (Linux, macOS, Switch): OpenGL, or
 # Vulkan with XBOXRECOMP_VULKAN=ON. Windows keeps its D3D11 path.
-if(NOT WIN32)
-    if(XBOXRECOMP_VULKAN)
-        add_subdirectory(src/nv2a_vk)
-    else()
-        add_subdirectory(src/nv2a_gl)
-    endif()
+# sheroes-nx: Vulkan on Windows too (the Switch's renderer, for PC testing).
+if(XBOXRECOMP_VULKAN)
+    add_subdirectory(src/nv2a_vk)
+elseif(NOT WIN32)
+    add_subdirectory(src/nv2a_gl)
 endif()
 
 # ── Umbrella target ───────────────────────────────────────────
@@ -98,11 +97,9 @@ target_link_libraries(xboxrecomp INTERFACE
     xbox_nv2a
     xbox_video
 )
-if(NOT WIN32)
-    if(XBOXRECOMP_VULKAN)
-        target_link_libraries(xboxrecomp INTERFACE xbox_nv2a_vk)
-    else()
-        target_link_libraries(xboxrecomp INTERFACE xbox_nv2a_gl)
-    endif()
+if(XBOXRECOMP_VULKAN)
+    target_link_libraries(xboxrecomp INTERFACE xbox_nv2a_vk)
+elseif(NOT WIN32)
+    target_link_libraries(xboxrecomp INTERFACE xbox_nv2a_gl)
 endif()
 

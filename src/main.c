@@ -335,6 +335,12 @@ static int game_main(void)
     if (!getenv("RECOMP_VBLANK"))     _putenv("RECOMP_VBLANK=1");
     if (!getenv("RECOMP_AC97_READY")) _putenv("RECOMP_AC97_READY=plain");
     if (!getenv("RECOMP_USB"))        _putenv("RECOMP_USB=1");
+#if defined(NFSU2_VULKAN)
+    /* sheroes-nx: the Windows Vulkan build draws as the Switch does, through the
+     * pushbuffer executor and nv2a_vk (not the D3D11 path). */
+    if (!getenv("RECOMP_PB_EXEC"))    _putenv("RECOMP_PB_EXEC=1");
+    if (!getenv("RECOMP_CULL"))       _putenv("RECOMP_CULL=0");
+#endif
 #else
     setenv("RECOMP_WIDESCREEN", "0", 0);   /* CoD-nx: 4:3, as on Windows above */
     setenv("RECOMP_VBLANK", "1", 0);
@@ -409,7 +415,7 @@ static int game_main(void)
         /* nic: NFSU2 only */
     }
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(NFSU2_VULKAN)
     /* The GPU renderer (NFSU2_GL=0 falls back to the executor's CPU one). */
     {
         const char *gl = getenv("NFSU2_GL");

@@ -28,6 +28,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>   /* sheroes-nx: getenv (diagnostics) */
 
 typedef struct {
     char  *p;

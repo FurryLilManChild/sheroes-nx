@@ -61,11 +61,15 @@
 #include <glslang/Include/glslang_c_interface.h>
 #include <glslang/Public/resource_limits_c.h>
 
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#if defined(_WIN32)
+#include "nv2a_vk_win32.h"   /* sheroes-nx: the Windows build of this renderer */
+#else
+#include <pthread.h>
+#endif
 
 extern ptrdiff_t xbox_GetMemoryOffset(void);
 
@@ -4075,7 +4079,12 @@ static void dump_fxaa(VkSurf *s, const char *path)
 /* The host's per-frame hook (switch_saltynx.c: the frame rate for SaltyNX
  * overlays), with the rendered picture's size. Weak and undefined
  * elsewhere: the call is skipped. */
+#if defined(_WIN32)
+/* sheroes-nx: no weak symbols on Windows; the hook is a Switch-only one. */
+static void (*const nv2a_host_frame_presented)(uint32_t width, uint32_t height) = NULL;
+#else
 extern void nv2a_host_frame_presented(uint32_t width, uint32_t height) __attribute__((weak));
+#endif
 
 static void vk_flip(void)
 {

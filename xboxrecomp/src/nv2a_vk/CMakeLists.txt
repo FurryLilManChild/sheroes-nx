@@ -26,6 +26,13 @@ if(NINTENDO_SWITCH)
     target_link_libraries(xbox_nv2a_vk PUBLIC
         "${NVK_SDK}/lib/libvulkan.a" expat zstd z nx
         "${NVK_SDK}/lib/libvulkan.a" expat zstd z nx stdc++ m)   # cod-nx: zstd (mesa-switch util_compress)
+elseif(WIN32)
+    # sheroes-nx: Windows. The Vulkan SDK's loader and headers, SDL2's VC
+    # package and glslang built by tools/win/build_pc.ps1 (out/deps).
+    find_package(Vulkan REQUIRED)
+    find_package(SDL2 CONFIG REQUIRED)
+    target_link_libraries(xbox_nv2a_vk PUBLIC Vulkan::Vulkan SDL2::SDL2)
+    target_compile_definitions(xbox_nv2a_vk PRIVATE SDL_MAIN_HANDLED)
 else()
     find_package(Vulkan REQUIRED)
     find_package(PkgConfig REQUIRED)

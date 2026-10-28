@@ -24,6 +24,11 @@ the game partition starts at offset 0); the extracted disc is `C:\sheroes-nx\ass
 reaches both through the device bridge. He moves files to the Switch's SD card himself over USB; he does not want
 Claude to control the Switch's folders. He drops Switch logs in `C:\sheroes-nx\out\sd\switch\switchlogs`.
 
+Workflow (Mark's choice, 2026-10-28): as on the Xbox 360 ports. Mark builds on his PC in PowerShell
+(`tools\win\build_pc.ps1`), runs boot tests and play tests, Claude reads `C:\sheroes-nx\out\logs` through the
+bridge and pushes fixes. Get the game working on the PC first, then the Switch. Avoid long cloud test runs (the cloud
+Linux build on lavapipe needs about 7 minutes to reach a stage).
+
 Git: commit as `FurryLilManChild <346934328+FurryLilManChild@users.noreply.github.com>`. History rewrites and force
 pushes need his explicit consent.
 
@@ -48,6 +53,7 @@ pushes need his explicit consent.
 | `config/seed_functions.json` | entry points the static pass misses |
 | `tools/regen.sh` | XBE to C: disasm, func_id, abi_analysis, recomp (into `out/gen/`) |
 | `switch/build.sh` | the Switch NRO (Vulkan with NVK by default; `VULKAN=0` for OpenGL) |
+| `tools/win/*.ps1` | the Windows PC build on Mark's PC (same Vulkan renderer as the Switch): `build_pc.ps1`, `boot_test.ps1`, `play.ps1`; logs in `out\logs\` (docs/windows-build.md) |
 | `tools/linux/setup_switch_wine.sh` | devkitPro's Windows install under Wine on a cloud machine |
 | `assets/game_root/` | the extracted disc (ignored) |
 

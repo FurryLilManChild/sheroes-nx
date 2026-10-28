@@ -47,9 +47,11 @@ set(GAME_SOURCES
     src/switch_saltynx.c
 )
 
-if(WIN32)
+if(WIN32 AND NOT NFSU2_VULKAN)
     add_executable(${PROJECT_NAME} WIN32 ${GAME_SOURCES} ${RECOMP_GEN_SOURCES})
 else()
+    # sheroes-nx: the Windows Vulkan build is a console program, so its log
+    # (stdout and stderr) can be written to out\logs by the test scripts.
     add_executable(${PROJECT_NAME} ${GAME_SOURCES} ${RECOMP_GEN_SOURCES})
 endif()
 
@@ -88,6 +90,12 @@ if(WIN32)
     if(MSVC)
         target_link_options(${PROJECT_NAME} PRIVATE /LARGEADDRESSAWARE)
         target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+    else()
+        # sheroes-nx: clang (GNU driver, MSVC libraries) as the 360 ports build:
+        # the lifted chunks as on Linux.
+        set(NFSU2_GEN_OPT "-O1" CACHE STRING "Optimisation for the lifted code")
+        set_source_files_properties(${RECOMP_GEN_SOURCES} PROPERTIES
+            COMPILE_OPTIONS "${NFSU2_GEN_OPT};-w;-fno-strict-aliasing;-fwrapv")
     endif()
 else()
     # The generated chunks are huge straight-line functions; -O1 keeps GCC's

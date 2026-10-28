@@ -1,5 +1,25 @@
 # Progress log (newest first)
 
+## 2026-10-28: Switch tests, the Windows Vulkan build
+
+- Switch test 1 (b5ec2c45): black screen, the log quiet after 7 s of loading. Switch test 2 (d957eb02,
+  RECOMP_QUIET=0): boot, the attract demo's files at 23 s, the renderer up only at 46 s, then 0.0 to 0.1 fps with
+  NOW LOADING showing; 38.7 million RtlEnterCriticalSection / RtlLeaveCriticalSection calls (ordinals 277/294) in
+  283 s: a lock the threads spin on under Horizon's scheduler. Parked until the PC build works.
+- Linux, the attract demo: the stage loads, but a black full-screen quad drawn first every frame (z 0.001, depth
+  write on, LEQUAL, alpha test passes: diffuse alpha) blocks everything after it; skipping it
+  (RECOMP_DBG_SKIPNEARQUAD=1) shows the sky, the sea and Team Sonic, with the stage geometry white. Ruled out: float
+  or W depth (CONTROL0 0x00100001, Z24S8), stencil (off), SET_CLIP_MIN/MAX (0..16777215; clip support added
+  anyway), the cull state (0x405 back, 0x901 CCW front; flipping it turns the models inside out), fog, the render
+  target stages 2-3, mip chains, stale surfaces. White ground: the combiner is diffuse x texture 0; blanking stages
+  0-1 turns it black, so texture 0 reads white. Diagnostics added: RECOMP_DBG_NOZ, _SKIPNEARQUAD, _FLIPFRONT,
+  _NOFOG, _TEXOFF=<mask>, _DXT; the frame trace now prints formats, clip range, cull, alpha test, combiners.
+- One crash in DSOUND's voice notification (sub_00341EDC, a null voice slot, on the timer thread) in 15 runs.
+- Mark chose the Xbox 360 ports' loop: he builds and tests on his PC. The Windows build now uses the Switch's
+  renderer: nv2a_vk on WIN32 (SDL2's VC package, glslang 15.4.0 from source, the Vulkan SDK), a console program,
+  the pushbuffer executor on (RECOMP_PB_EXEC); POSIX shims for nv2a_vk (nv2a_vk_win32.h). tools/win/: env.ps1 (from
+  mof-nx), check_tools.ps1, build_pc.ps1 (deps, translation on the PC, configure, compile), boot_test.ps1, play.ps1.
+
 ## 2026-10-27: the heap's top block
 
 - With a 6 MB bigger heap the story still failed the same way, and the game's use grew by the same 6 MB, so it was

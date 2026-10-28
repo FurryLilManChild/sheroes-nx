@@ -101,6 +101,9 @@ if(WIN32)
         set(NFSU2_GEN_OPT "-O1" CACHE STRING "Optimisation for the lifted code")
         set_source_files_properties(${RECOMP_GEN_SOURCES} PROPERTIES
             COMPILE_OPTIONS "${NFSU2_GEN_OPT};-w;-fno-strict-aliasing;-fwrapv")
+        # A linker map (out/pc/sheroes_recomp.map) so the logs' host addresses
+        # resolve to functions.
+        target_link_options(${PROJECT_NAME} PRIVATE "-Wl,/MAP:${CMAKE_BINARY_DIR}/sheroes_recomp.map")
     endif()
 else()
     # The generated chunks are huge straight-line functions; -O1 keeps GCC's

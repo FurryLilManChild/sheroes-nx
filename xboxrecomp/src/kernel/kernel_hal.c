@@ -129,8 +129,14 @@ void xbox_IrqlDumpHolders(void)
     for (i = 0; i < IRQL_HOLDERS; i++) {
         LONG t = InterlockedCompareExchange(&s_holders[i].tid, 0, 0);
         if (t)
-            fprintf(stderr, "  [IRQLHOLD]   tid %lu raised from host %p\n",
-                    (unsigned long)t, s_holders[i].ra);
+            fprintf(stderr, "  [IRQLHOLD]   tid %lu raised from host %p (+0x%llX)\n",
+                    (unsigned long)t, s_holders[i].ra,
+#ifdef _WIN32
+                    (unsigned long long)((uintptr_t)s_holders[i].ra - (uintptr_t)GetModuleHandleA(NULL))
+#else
+                    0ull
+#endif
+                    );
     }
     fflush(stderr);
 }

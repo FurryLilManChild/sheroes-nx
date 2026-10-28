@@ -4117,6 +4117,27 @@ static volatile LONG s_trap_hooked, s_trap_lock, s_trap_taken;
  * a flip retired. Polling with Sleep(0) kept a core busy for the whole wait,
  * and a Switch has three. Auto-reset; the waits also time out every
  * millisecond, so a missed signal costs a millisecond, not a hang. */
+/* sheroes-nx: what a stalled trap is waiting behind (first PC boot,
+ * 2026-10-28: NOP(9) never taken, with a guest thread at DISPATCH). The first
+ * five stalls name the threads holding IRQL raised (host return addresses,
+ * relative to the program's base, which the linker map resolves), the irq
+ * lines and the DPC/interrupt state. */
+static void pb_trap_stall_report(void)
+{
+    extern void xbox_IrqlDumpHolders(void);
+    extern uint32_t xbox_irq_lines(void);
+    static int n;
+    if (n++ >= 5)
+        return;
+#ifdef _WIN32
+    fprintf(stderr, "  [PB] stall: program base %p, irq lines %08X\n",
+            (void *)GetModuleHandleA(NULL), xbox_irq_lines());
+#else
+    fprintf(stderr, "  [PB] stall: irq lines %08X\n", xbox_irq_lines());
+#endif
+    xbox_IrqlDumpHolders();
+}
+
 static HANDLE s_driver_event;
 
 static HANDLE driver_event(void)
@@ -4189,6 +4210,7 @@ static void trap_deliver_hooked(volatile uint32_t *nv, uint32_t method,
             fprintf(stderr, "  [PB] NOP(%u) trap still pending after 2 s "
                     "(PMC_INTR %08X EN %08X)\n", param, nv[0x100 / 4],
                     nv[0x140 / 4]);
+            pb_trap_stall_report();
             give_up = GetTickCount64() + 2000;
         }
         WaitForSingleObject(driver_event(), 1);
@@ -4425,6 +4447,7 @@ void nv2a_pb_exec_method(uint32_t subch, uint32_t method, uint32_t param)
                 fprintf(stderr, "  [PB] NOP(%u) trap still pending after 2 s "
                         "(PMC_INTR %08X EN %08X)\n", param, nv[0x100 / 4],
                         nv[0x140 / 4]);
+                pb_trap_stall_report();
                 give_up = GetTickCount64() + 2000;
             }
             Sleep(0);

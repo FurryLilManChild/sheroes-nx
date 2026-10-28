@@ -418,12 +418,22 @@ static void pad_live(int dev, unsigned long now)
         spec[strcspn(spec, "\r\n")] = 0;
         {   /* parse one step through the script parser */
             PadStep saved[PAD_SCRIPT_MAX];
-            const char *old = getenv("RECOMP_PAD_SCRIPT");
+            /* sheroes-nx: a copy of the old value (setting the variable may
+             * free it) and Windows' _putenv_s (no setenv/unsetenv there). */
+            const char *oldp = getenv("RECOMP_PAD_SCRIPT");
+            char *old = oldp ? strdup(oldp) : NULL;
             memcpy(saved, s_script_steps[0], sizeof saved);
+#ifdef _WIN32
+            _putenv_s("RECOMP_PAD_SCRIPT", spec);
+            pad_script_parse(0);
+            _putenv_s("RECOMP_PAD_SCRIPT", old ? old : "");
+#else
             setenv("RECOMP_PAD_SCRIPT", spec, 1);
             pad_script_parse(0);
             if (old) setenv("RECOMP_PAD_SCRIPT", old, 1);
             else unsetenv("RECOMP_PAD_SCRIPT");
+#endif
+            free(old);
             if (s_script_count[0] == 1) {
                 PadStep st = s_script_steps[0][0];
                 memcpy(s_script_steps[0], saved, sizeof saved);

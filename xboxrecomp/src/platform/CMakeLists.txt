@@ -21,8 +21,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 get_filename_component(XBOXRECOMP_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
 if(WIN32)
-    add_library(platform INTERFACE)
-    target_include_directories(platform INTERFACE ${XBOXRECOMP_SRC_DIR})
+    # sheroes-nx: a small static library with the Windows side of the host
+    # thread hooks (win32_host.c); the Win32 primitives are the real ones.
+    add_library(platform STATIC win32_host.c)
+    target_include_directories(platform PUBLIC ${XBOXRECOMP_SRC_DIR})
 else()
     add_library(platform STATIC win32_compat.c)
     target_include_directories(platform PUBLIC

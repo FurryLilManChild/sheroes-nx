@@ -1,5 +1,18 @@
 # Progress log (newest first)
 
+## 2026-10-28 (later): the first PC builds
+
+- Build 1: glslang installed into a folder named `$glslangOut` (Windows PowerShell 5.1 does not expand a variable in
+  an unquoted `-DNAME=$var` argument), so configure could not find it. Quoted; the stray folder is removed.
+- Build 2: the APU failed under clang on Windows: qemu_shim.h redefined __builtin_ctz/clz for _MSC_VER (clang defines
+  _MSC_VER too and has them built in), and M_PI/M_E needed _USE_MATH_DEFINES, set by the toolkit for MSVC only.
+- tools/linux/wincheck.sh: a Windows compile and link check in the cloud (clang for x86_64-pc-windows-msvc, MinGW's
+  headers in place of Microsoft's, empty system libraries). It found the rest before Mark's next build: setenv and
+  unsetenv in usb_gamepad.c (now _putenv_s), clock_gettime in nv2a_pb_exec.c and sheroes_menu.c
+  (platform/win32_clock.h, QueryPerformanceCounter), and xbox_guest_pin / xbox_nx_* only defined in the POSIX
+  win32_compat.c (platform/win32_host.c on Windows, the one-core pin opt-in as on Linux). All 156 objects compile;
+  the link leaves only Windows and C runtime functions.
+
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 
 - Switch test 1 (b5ec2c45): black screen, the log quiet after 7 s of loading. Switch test 2 (d957eb02,

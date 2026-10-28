@@ -54,8 +54,8 @@ typedef uintptr_t target_ulong;
  * Bit manipulation
  * ============================================================ */
 
-/* For MSVC which doesn't have __builtin_ctz: */
-#ifdef _MSC_VER
+/* For MSVC which doesn't have __builtin_ctz (clang on Windows has it built in): */
+#if defined(_MSC_VER) && !defined(__clang__)
 #include <intrin.h>
 static inline int __builtin_ctz(unsigned int x) {
     unsigned long index;

@@ -40,6 +40,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "../xboxrecomp/src/platform/win32_clock.h"   /* sheroes-nx: clock_gettime on Windows */
 
 #include "sheroes_menu.h"
 #include "sheroes_font8x8.h"

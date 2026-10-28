@@ -21,6 +21,11 @@ add_compile_definitions(
     WIN32_LEAN_AND_MEAN
     NOMINMAX
 )
+if(WIN32)
+    # sheroes-nx: the toolkit set these under if(MSVC) only; clang (GNU driver)
+    # with the MSVC headers needs them too (M_PI, the CRT's deprecations).
+    add_compile_definitions(_USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_WARNINGS)
+endif()
 
 # Option to build examples
 

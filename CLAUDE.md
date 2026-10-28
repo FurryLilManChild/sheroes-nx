@@ -28,6 +28,8 @@ Workflow (Mark's choice, 2026-10-28): as on the Xbox 360 ports. Mark builds on h
 (`tools\win\build_pc.ps1`), runs boot tests and play tests, Claude reads `C:\sheroes-nx\out\logs` through the
 bridge and pushes fixes. Get the game working on the PC first, then the Switch. Avoid long cloud test runs (the cloud
 Linux build on lavapipe needs about 7 minutes to reach a stage).
+Priority (Mark, 2026-10-28): playability first. Get a stage running and playable before cosmetic issues (the team
+select models, missing letters in text).
 
 Git: commit as `FurryLilManChild <346934328+FurryLilManChild@users.noreply.github.com>`. History rewrites and force
 pushes need his explicit consent.

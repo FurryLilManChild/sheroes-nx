@@ -37,6 +37,13 @@
   sat right after jump-table index bytes the disassembler's sweep decoded as code, so it rejected them as
   mid-instruction; seeds can now carry "verified": true (checked by hand, stated in the note), trusted like
   observed ones (tools/disasm/__main__.py).
+- Play 3: the movie plays, the first stage loads and draws on the PC (no black quad: that was lavapipe), geometry
+  white, and in the stage only the triggers (camera) respond. ~20,000 calls to 0: HUD number drawing
+  (sub_0003AB20) calls 0x002D4B80 = jmp [obj+0x12C] with obj = [0x00558A8C] = 0, the result of the sprite-set
+  lookup by name "a_num_s" (0x002D4B70). In the stage the game read font\a_num_s.met (METRICS2, pages a_num_sa.png
+  and a_num_sb.png) and a_num_sa.png and never opened a_num_sb.png: PNG decode suspected (libpng 1.0.12, zlib
+  1.1.3), which also fits the menu text missing letters. png_error 0x00293410 and png_warning 0x00293430 now log
+  their message. The stage's DXT1 uploads hold real data ([DXT] log). tools/win/trace_frame.ps1 traces one frame.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

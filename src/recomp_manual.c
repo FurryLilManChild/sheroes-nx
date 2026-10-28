@@ -261,6 +261,49 @@ void sub_00332A40(void)
     d3d_isr_leave(old);
 }
 
+/* ── libpng 1.0.12 error and warning reports (0x00293410, 0x00293430) ──
+ *
+ * Diagnostic. The first PC stage run (2026-10-28) loaded font\a_num_s.met
+ * and a_num_sa.png and never opened a_num_sb.png; the HUD then looked the set
+ * up by name (0x002D4B70, "a_num_s") and called through the null result
+ * (null calls from sub_0003AB20, the HUD numbers). Menu text missing letters
+ * fits the same cause: the fonts are PNGs. libpng 1.0.12 is linked (strings
+ * at 0x003D0D78, zlib "inflate 1.1.3"); png_error(png_ptr, msg) is
+ * 0x00293410 (26 call sites push a libpng message and call it; it calls the
+ * error callback at [png_ptr+0x40] and longjmps), png_warning 0x00293430 (12
+ * sites). Both cdecl: [esp+4] png_ptr, [esp+8] the message. Logged, then the
+ * original runs. */
+extern void sub_00293410_gen(void);
+extern void sub_00293430_gen(void);
+
+static void png_report(const char *what)
+{
+    static unsigned n;
+    uint32_t msg = MEM32(esp + 8);
+    char text[96];
+    unsigned k;
+    for (k = 0; k + 1 < sizeof text && msg; k++) {
+        char c = (char)MEM8(msg + k);
+        if (!c) break;
+        text[k] = (c >= 32 && c < 127) ? c : '?';
+    }
+    text[k] = 0;
+    if (n++ < 64)
+        fprintf(stderr, "[PNG] %s: %s (from 0x%08X)\n", what, text, MEM32(esp));
+}
+
+void sub_00293410(void)
+{
+    png_report("error");
+    sub_00293410_gen();
+}
+
+void sub_00293430(void)
+{
+    png_report("warning");
+    sub_00293430_gen();
+}
+
 /* ── Manual function overrides ─────────────────────────────── */
 
 /*

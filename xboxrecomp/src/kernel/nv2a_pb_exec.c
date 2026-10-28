@@ -3416,6 +3416,16 @@ static void raw_batch(void)
                 s_reg[0x0288 / 4], s_reg[0x028C / 4], s_reg[0x0260 / 4], s_reg[0x0A60 / 4],
                 s_reg[0x0304 / 4], s_reg[0x0344 / 4], s_reg[0x0348 / 4],
                 s_reg[0x0208 / 4], s_reg[0x0290 / 4]);
+        if (rb.xform == 1) {
+            const float *m = s_gpu.composite;
+            float a0[4] = {0};
+            fetch_attr(&s_gpu.attr[0], s_gpu.idx_count ? s_gpu.idx[0] : 0, a0);
+            fprintf(stderr, "[FTRACE]   composite %g %g %g %g | %g %g %g %g | %g %g %g %g | %g %g %g %g"
+                    " | vpoff %g %g %g %g | pos0 %g %g %g %g\n",
+                    m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11],
+                    m[12], m[13], m[14], m[15], s_gpu.vp_offset[0], s_gpu.vp_offset[1],
+                    s_gpu.vp_offset[2], s_gpu.vp_offset[3], a0[0], a0[1], a0[2], a0[3]);
+        }
     }
     s_backend->draw_raw(&rb);
     s_gpu.tris_drawn += s_gpu.idx_count / 3;

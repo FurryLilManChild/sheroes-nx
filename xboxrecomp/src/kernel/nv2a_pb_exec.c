@@ -3432,6 +3432,21 @@ static void raw_batch(void)
                     s_gpu.vp_offset[2], s_gpu.vp_offset[3], a0[0], a0[1], a0[2], a0[3]);
         }
     }
+    {   /* sheroes-nx diagnostic: RECOMP_DBG_SKIPNEARQUAD=1 drops immediate
+         * quads (4 vertices) drawn with depth writes at screen depth below
+         * 1% of the buffer. */
+        static int skipq = -1;
+        if (skipq < 0) skipq = getenv("RECOMP_DBG_SKIPNEARQUAD") != NULL;
+        if (skipq && s_gpu.inline_active && s_gpu.idx_count == 4 && s_gpu.rs.depth_write) {
+            float q0[4];
+            if (fetch_position(s_gpu.idx[0], q0) && q0[2] < 0.01f * 16777215.0f) {
+                static int shown;
+                if (shown++ < 3)
+                    fprintf(stderr, "[DBG] skipped near quad z %g\n", q0[2]);
+                return;
+            }
+        }
+    }
     s_backend->draw_raw(&rb);
     s_gpu.tris_drawn += s_gpu.idx_count / 3;
     s_gpu.drawn_offset = s_gpu.color_offset;

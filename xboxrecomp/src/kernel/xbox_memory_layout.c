@@ -3724,9 +3724,23 @@ static uint32_t heap_alloc_locked(uint32_t size, uint32_t alignment);
 uint32_t xbox_HeapAlloc(uint32_t size, uint32_t alignment)
 {
     uint32_t r;
+    static int big_log = -1;
     AcquireSRWLockExclusive(&g_heap_lock);
     r = heap_alloc_locked(size, alignment);
     ReleaseSRWLockExclusive(&g_heap_lock);
+    /* sheroes-nx: RECOMP_HEAP_BIG=1 logs every allocation of 1 MB or more with
+     * the guest return address on the kernel call ([esp] at the thunk). */
+    if (big_log < 0)
+        big_log = getenv("RECOMP_HEAP_BIG") != NULL;
+    if (big_log && size >= 0x100000) {
+        uint32_t sp = g_esp;
+        uint32_t ra = (sp > 0x10000 && sp < 0x08000000u)
+            ? *(uint32_t *)((uint8_t *)g_memory_offset + sp) : 0;
+        uint32_t ra2 = (sp > 0x10000 && sp < 0x08000000u)
+            ? *(uint32_t *)((uint8_t *)g_memory_offset + sp + 4) : 0;
+        fprintf(stderr, "[HEAP-BIG] %u bytes -> 0x%08X (ret 0x%08X, [esp+4] 0x%08X)\n",
+                size, r, ra, ra2);
+    }
     return r;
 }
 
@@ -3925,6 +3939,22 @@ void xbox_HeapFree(uint32_t xbox_va)
                 g_heap_blocks[p].size += g_heap_blocks[i].size;
                 g_heap_blocks[i].size = 0;
                 g_heap_blocks[i].addr = 0;
+                i = p;
+            }
+            /* sheroes-nx: a free block that ends at the bump pointer goes back
+             * to it. Without this a free tail block and the space above it
+             * could never serve one request: Sonic Heroes allocated and freed
+             * 8.4 MB at boot, then could not get it again for the story's
+             * first event (a free block at the top plus 4.5 MB of untouched
+             * heap, neither big enough alone) and fell to the staff roll. */
+            if (g_heap_blocks[i].size &&
+                g_heap_blocks[i].addr + g_heap_blocks[i].size == g_heap_next) {
+                g_heap_next = g_heap_blocks[i].addr;
+                g_heap_blocks[i].size = 0;
+                g_heap_blocks[i].addr = 0;
+                while (g_heap_block_count > 0 &&
+                       g_heap_blocks[g_heap_block_count - 1].size == 0)
+                    g_heap_block_count--;
             }
         }
         ReleaseSRWLockExclusive(&g_heap_lock);

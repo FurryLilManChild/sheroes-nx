@@ -1,5 +1,16 @@
 # Progress log (newest first)
 
+## 2026-10-27: the heap's top block
+
+- With a 6 MB bigger heap the story still failed the same way, and the game's use grew by the same 6 MB, so it was
+  not the budget. RECOMP_HEAP_BIG=1 (new: logs allocations of 1 MB or more) shows the 8,431,088-byte block allocated
+  and freed at boot. The runtime's first-fit heap coalesced freed neighbours but never gave a free block at the top
+  back to the bump pointer, so a free tail plus the untouched space above it could not serve one large request.
+  xbox_HeapFree now returns such a block (and trims empty slots at the end of the table).
+- The attract demo still sits on NOW LOADING on Linux with every stage file opened, the loading music streaming and
+  the CRI server thread resumed and suspended about 36 times a second; the main thread is always in the renderer,
+  waiting on lavapipe (about 10 to 15 fps on this 2-core machine). Not solved yet.
+
 ## 2026-10-27: self-suspending threads, the heap, the main menu on Linux
 
 - Loading never finished (the attract demo sat on NOW LOADING). gdb: a thread looping in sub_002ED700 calling

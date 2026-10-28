@@ -319,7 +319,7 @@ void sub_0029B4E0(void)
     uint32_t strm = MEM32(esp + 4), flush = MEM32(esp + 8);
     uint32_t in0 = strm ? MEM32(strm + 8) : 0, out0 = strm ? MEM32(strm + 0x14) : 0;
     sub_0029B4E0_gen();
-    if (eax != 0) {                     /* anything but Z_OK */
+    if (eax != 0 && eax != 1) {         /* not Z_OK or Z_STREAM_END */
         static unsigned n;
         char text[64] = "";
         uint32_t msg = strm ? MEM32(strm + 0x18) : 0;

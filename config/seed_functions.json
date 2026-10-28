@@ -618,10 +618,6 @@
   "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_0027C12C; starts 'push ecx; sub esp, 0x10'"
  },
  {
-  "start": "0x002A16B0",
-  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_002A1320; starts 'push ebx; add byte ptr [ebx], ah'"
- },
- {
   "start": "0x002BA590",
   "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'sub esp, 8; push ebx'"
  },

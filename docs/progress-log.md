@@ -44,6 +44,13 @@
   and a_num_sb.png) and a_num_sa.png and never opened a_num_sb.png: PNG decode suspected (libpng 1.0.12, zlib
   1.1.3), which also fits the menu text missing letters. png_error 0x00293410 and png_warning 0x00293430 now log
   their message. The stage's DXT1 uploads hold real data ([DXT] log). tools/win/trace_frame.ps1 traces one frame.
+- Play 4: every PNG failed with "Decompression error"; zlib's inflate (0x0029B4E0) returned 32511, not a zlib code.
+  Reproduced on Linux in 90 s (the fonts at boot). Probes: inflate_blocks came back with esp 36 bytes off and the
+  bad value; inflate_codes never returned. Cause: a seed of mine, 0x002A16B0 (the [pad] sweep, 2026-10-27, which
+  took operand bytes CC for int3 padding; its note even shows the garbage decode), split inflate_codes
+  (0x002A1320-0x002A1A30, switch table at 0x002A1A04) inside an instruction at 0x002A16AB. Removed; all PNGs
+  decode. A scan tracing every function's control flow for starts inside another real function's instructions
+  found nothing else (only harmless alias starts in sub_001D7CC0). Kept: [ZLIB] logs any failing inflate.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

@@ -107,7 +107,7 @@ static VkPhysicalDeviceMemoryProperties s_memprops;
 static VkDeviceSize     s_ubo_align = 256;
 static uint32_t         s_ubo_range = 16384;
 static VkFormat         s_depth_fmt = VK_FORMAT_D24_UNORM_S8_UINT;
-static int              s_have_bc, s_have_depth_clamp;
+static int              s_have_bc, s_have_depth_clamp, s_have_clip_dist;
 
 static PFN_vkCmdPushDescriptorSetKHR  p_push_desc;
 static PFN_vkCmdSetVertexInputEXT     p_vertex_input;
@@ -2398,6 +2398,7 @@ static int ready(void)
     vkGetPhysicalDeviceFeatures(s_pd, &have);
     s_have_bc = have.textureCompressionBC;
     s_have_depth_clamp = have.depthClamp;
+    s_have_clip_dist = have.shaderClipDistance;
     {
         const char *e = getenv("RECOMP_VK_MIPS");
         s_mips = !(e && *e == '0');
@@ -2415,6 +2416,7 @@ static int ready(void)
             s_aniso = pp.limits.maxSamplerAnisotropy;
     }
     nv2a_shader_depth_clamp = s_have_depth_clamp;
+    nv2a_shader_clip_distance = s_have_clip_dist;
     {
         VkFormatProperties fp;
         vkGetPhysicalDeviceFormatProperties(s_pd, VK_FORMAT_D24_UNORM_S8_UINT, &fp);
@@ -2465,6 +2467,7 @@ static int ready(void)
     f2.pNext = &f13;
     f2.features.textureCompressionBC = s_have_bc ? VK_TRUE : VK_FALSE;
     f2.features.depthClamp = s_have_depth_clamp ? VK_TRUE : VK_FALSE;
+    f2.features.shaderClipDistance = s_have_clip_dist ? VK_TRUE : VK_FALSE;
     f2.features.samplerAnisotropy = s_aniso > 1.0f ? VK_TRUE : VK_FALSE;
     s_vis_precise = have.occlusionQueryPrecise;
     f2.features.occlusionQueryPrecise = s_vis_precise ? VK_TRUE : VK_FALSE;
@@ -3051,6 +3054,7 @@ typedef struct {
     float aa[2];
     int32_t xform;
     float snap_y;              /* nv2a_snap's offset for y; surf[3] is x's */
+    float zclip[2];            /* sheroes-nx: SET_CLIP_MIN/MAX as depth 0..1 */
 } VsBlock;
 
 typedef struct {
@@ -3382,6 +3386,18 @@ static void vk_draw_raw(const Nv2aRawBatch *b)
         vb->surf[2] = 1.0f / (float)zmax_of(r);
         vb->surf[3] = 0.5f - 0.5f * (float)s->w / (float)s->pw; /* see nv2a_snap */
         vb->snap_y = 0.5f - 0.5f * (float)s->h / (float)s->ph;
+        {   /* sheroes-nx: the clip range, off when it spans the whole buffer */
+            float zm = (float)zmax_of(r), lo, hi;
+            memcpy(&lo, &r[0x394 / 4], 4);
+            memcpy(&hi, &r[0x398 / 4], 4);
+            if (!(lo == lo) || !(hi == hi) || hi <= lo || (lo <= 0.0f && hi >= zm)) {
+                vb->zclip[0] = -1e30f;
+                vb->zclip[1] = 1e30f;
+            } else {
+                vb->zclip[0] = lo / zm;
+                vb->zclip[1] = hi / zm;
+            }
+        }
         memcpy(vb->m, b->composite, sizeof vb->m);
         memcpy(vb->vpoff, b->vp_offset, sizeof vb->vpoff);
         vb->aa[0] = b->aa_sx > 0 ? b->aa_sx : 1.0f;

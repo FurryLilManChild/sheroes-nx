@@ -15,6 +15,7 @@ extern int nv2a_shader_vk;
 /* Nonzero (Vulkan): the device clamps depth per fragment (depthClamp), so
  * the vertex shader leaves clip z unclamped. Set before the first shader. */
 extern int nv2a_shader_depth_clamp;
+extern int nv2a_shader_clip_distance;   /* sheroes-nx: SET_CLIP_MIN/MAX as clip distances */
 
 /* Declarations and helpers every vertex shader starts with. */
 const char *nv2a_gl_vsh_prelude(void);

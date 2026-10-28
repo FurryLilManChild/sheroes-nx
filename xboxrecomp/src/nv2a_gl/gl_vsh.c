@@ -286,6 +286,7 @@ static const char s_vk_prelude[] =
     "    vec2 u_aa;\n"
     "    int u_xform;\n"
     "    float u_snap_y;\n"
+    "    vec2 u_zclip;\n"     /* sheroes-nx: SET_CLIP_MIN/MAX as depth 0..1 */
     "};\n"
     /* Transform constants, 192 per instance: an instanced draw (nv2a_vk.c)
      * repeats one mesh with each instance's own set. NV2A_VK_INSTANCES. */
@@ -323,6 +324,7 @@ static const char s_vk_prelude[] =
 static const char s_vk_clip_clamp[] =
     "vec4 nv2a_clip(vec3 sw, float w) {\n"
     "    float z = sw.z * u_surf.z;\n"
+    "NV2A_ZCLIP(z)"
     "    sw.xy = nv2a_snap(sw.xy, w);\n"
     "    return vec4(sw.x * u_surf.x - w, sw.y * u_surf.y - w,\n"
     "                w > 0.0 ? clamp(z, 0.0, w) : z, w);\n"
@@ -335,28 +337,76 @@ static const char s_vk_clip_clamp[] =
  * reflection, which then showed as a solid upside-down car. */
 static const char s_vk_clip_free[] =
     "vec4 nv2a_clip(vec3 sw, float w) {\n"
+    "NV2A_ZCLIP(sw.z * u_surf.z)"
     "    sw.xy = nv2a_snap(sw.xy, w);\n"
     "    return vec4(sw.x * u_surf.x - w, sw.y * u_surf.y - w, sw.z * u_surf.z, w);\n"
     "}\n";
 
 int nv2a_shader_vk;
 int nv2a_shader_depth_clamp;
+int nv2a_shader_clip_distance;
+
+/* sheroes-nx: the NV2A clips against SET_CLIP_MIN/MAX in screen depth (D3D sets
+ * them from the viewport's MinZ/MaxZ). Sonic Heroes draws a black full-screen
+ * quad at depth 0.001 first in every gameplay frame, below its clip minimum:
+ * the console discards it, and drawn here it claimed the nearest depth so
+ * every mesh after it failed the depth test (a black stage). The marker
+ * NV2A_ZCLIP(z) in the clip functions becomes two clip distances when the
+ * device has shaderClipDistance (u_zclip is (-1e30, 1e30) when the range is
+ * the whole buffer, so nothing changes for titles that never narrow it). */
+static char *zclip_expand(const char *clip, int cd)
+{
+    const char *m = strstr(clip, "NV2A_ZCLIP(");
+    const char *e;
+    char line[256], *out;
+    size_t a, c, l;
+
+    if (!m)
+        return NULL;
+    e = strchr(m + 11, ')');      /* the expressions hold no parentheses */
+    if (!e)
+        return NULL;
+    if (cd)
+        snprintf(line, sizeof line,
+                 "    { float zc_ = %.*s; gl_ClipDistance[0] = zc_ - u_zclip.x * w;"
+                 " gl_ClipDistance[1] = u_zclip.y * w - zc_; }\n",
+                 (int)(e - (m + 11)), m + 11);
+    else
+        line[0] = 0;
+    a = (size_t)(m - clip);
+    l = strlen(line);
+    c = strlen(e + 1);
+    out = (char *)malloc(a + l + c + 1);
+    if (!out)
+        return NULL;
+    memcpy(out, clip, a);
+    memcpy(out + a, line, l);
+    memcpy(out + a + l, e + 1, c + 1);
+    return out;
+}
 
 const char *nv2a_gl_vsh_prelude(void)
 {
     if (nv2a_shader_vk) {
-        static char *pre[2];
+        static char *pre[2][2];
         int dc = nv2a_shader_depth_clamp != 0;
-        if (!pre[dc]) {
-            const char *clip = dc ? s_vk_clip_free : s_vk_clip_clamp;
-            size_t a = sizeof s_vk_prelude - 1, c = strlen(clip);
-            pre[dc] = (char *)malloc(a + c + 1);
-            if (!pre[dc])
+        int cd = nv2a_shader_clip_distance != 0;
+        if (!pre[dc][cd]) {
+            static const char decl[] = "out float gl_ClipDistance[2];\n";
+            char *clip = zclip_expand(dc ? s_vk_clip_free : s_vk_clip_clamp, cd);
+            size_t a = sizeof s_vk_prelude - 1, d = cd ? sizeof decl - 1 : 0, c;
+            if (!clip)
                 return s_vk_prelude;
-            memcpy(pre[dc], s_vk_prelude, a);
-            memcpy(pre[dc] + a, clip, c + 1);
+            c = strlen(clip);
+            pre[dc][cd] = (char *)malloc(a + d + c + 1);
+            if (!pre[dc][cd])
+                return s_vk_prelude;
+            memcpy(pre[dc][cd], s_vk_prelude, a);
+            memcpy(pre[dc][cd] + a, decl, d);
+            memcpy(pre[dc][cd] + a + d, clip, c + 1);
+            free(clip);
         }
-        return pre[dc];
+        return pre[dc][cd];
     }
     return
         "#version 330 core\n"

@@ -326,8 +326,28 @@ recomp_func_t recomp_lookup_manual(uint32_t xbox_va)
  */
 void recomp_icall_fail_log(uint32_t va)
 {
-    fprintf(stderr, "[ICALL] Failed to resolve VA 0x%08X (total calls: %llu)\n",
-            va, (unsigned long long)g_icall_count);
+    /* sheroes-nx: the call site (the return address the call pushed, at
+     * [esp]) and the stack words above it, rate-limited per site: the first PC
+     * stage run logged 19,765 null calls at 18 lines each (2026-10-28). */
+    enum { SITES = 64 };
+    static uint32_t site_ra[SITES], site_n[SITES];
+    uint32_t ra = g_esp ? MEM32(g_esp) : 0;
+    int k;
+    for (k = 0; k < SITES && site_ra[k] && site_ra[k] != ra; k++)
+        ;
+    if (k < SITES) {
+        site_ra[k] = ra;
+        if (++site_n[k] > 3) {
+            if ((site_n[k] & (site_n[k] - 1)) == 0)
+                fprintf(stderr, "[ICALL] 0x%08X from 0x%08X: %u times\n", va, ra, site_n[k]);
+            return;
+        }
+    }
+    fprintf(stderr, "[ICALL] Failed to resolve VA 0x%08X (total calls: %llu), return address 0x%08X, "
+            "stack %08X %08X %08X %08X %08X %08X, ecx %08X\n",
+            va, (unsigned long long)g_icall_count, ra,
+            MEM32(g_esp + 4), MEM32(g_esp + 8), MEM32(g_esp + 12), MEM32(g_esp + 16),
+            MEM32(g_esp + 20), MEM32(g_esp + 24), g_ecx);
 
     /* Dump last 16 call targets from the ring buffer */
     fprintf(stderr, "  Recent ICALL targets:\n");

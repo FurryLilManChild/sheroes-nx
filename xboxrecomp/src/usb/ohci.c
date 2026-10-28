@@ -1381,8 +1381,15 @@ void xbox_OhciInit(void)
     ohci_reset(&s_hc[0], XBOX_OHCI0_BASE, 0);
     ohci_reset(&s_hc[1], XBOX_OHCI1_BASE, 1);
 
-#if defined(_WIN32)
-    /* The registers have to fault to be answered. The MCPX aperture is mapped
+#if defined(_WIN32) && defined(XBOX_OHCI_VEH)
+    /* sheroes-nx: off. This needs a VEH in the game project that calls
+     * xbox_OhciHandleMmio, and there is none here: the Windows build lifts XPP
+     * with --mmio-sections like Linux, so the MMIO accessors reach the model
+     * below on every host. With the pages protected, those accessors' own
+     * reads faulted (first PC boot, 2026-10-28: read 0xFED00000 from XPP
+     * 0x0037F812, the first OHCI register access).
+     *
+     * The registers have to fault to be answered. The MCPX aperture is mapped
      * as plain committed memory, so both blocks are made inaccessible here and
      * the title's VEH routes the faults back to xbox_OhciHandleMmio.
      *
@@ -1412,7 +1419,7 @@ void xbox_OhciInit(void)
     }
 #endif
 
-#if !defined(_WIN32)
+#if !(defined(_WIN32) && defined(XBOX_OHCI_VEH))
     /* No fault handling on this host: the registers stay plain memory and the
      * title's XPP code, lifted with --mmio-sections XPP, reaches the model
      * through the runtime's MMIO accessors instead. */

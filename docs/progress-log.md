@@ -12,6 +12,10 @@
   (platform/win32_clock.h, QueryPerformanceCounter), and xbox_guest_pin / xbox_nx_* only defined in the POSIX
   win32_compat.c (platform/win32_host.c on Windows, the one-core pin opt-in as on Linux). All 156 objects compile;
   the link leaves only Windows and C runtime functions.
+- Build 3 linked (174 steps). First PC boot: kernel, APU (XAudio2), save folders, then an access violation reading
+  0xFED00000 (OHCI) from XPP 0x0037F812. ohci.c protected its registers on Windows for a VEH that this project does
+  not have; XPP is lifted with --mmio-sections, so the model is now registered with the MMIO accessors on Windows
+  too, as on Linux (the VEH path stays behind XBOX_OHCI_VEH).
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

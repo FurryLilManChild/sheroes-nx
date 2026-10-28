@@ -4117,6 +4117,70 @@ static volatile LONG s_trap_hooked, s_trap_lock, s_trap_taken;
  * a flip retired. Polling with Sleep(0) kept a core busy for the whole wait,
  * and a Switch has three. Auto-reset; the waits also time out every
  * millisecond, so a missed signal costs a millisecond, not a hang. */
+#ifdef _WIN32
+/* sheroes-nx: another thread's host call stack, as offsets from the program's
+ * base (out/pc/sheroes_recomp.map resolves them). The thread is suspended
+ * only while its frames are collected; nothing is printed until it runs
+ * again, so a lock it holds (the CRT's, the heap's) cannot deadlock this. */
+static void pb_dump_thread_stack(unsigned long tid)
+{
+    uintptr_t base = (uintptr_t)GetModuleHandleA(NULL);
+    DWORD64 frames[32];
+    int n = 0, i;
+    HANDLE h = OpenThread(THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION,
+                          FALSE, (DWORD)tid);
+    CONTEXT ctx;
+
+    if (!h || tid == GetCurrentThreadId()) {
+        fprintf(stderr, "  [STACK] tid %lu: cannot open\n", tid);
+        if (h) CloseHandle(h);
+        return;
+    }
+    if (SuspendThread(h) != (DWORD)-1) {
+        memset(&ctx, 0, sizeof ctx);
+        ctx.ContextFlags = CONTEXT_FULL;
+        if (GetThreadContext(h, &ctx)) {
+            while (n < 32 && ctx.Rip) {
+                DWORD64 img = 0;
+                PRUNTIME_FUNCTION fn;
+                frames[n++] = ctx.Rip;
+                fn = RtlLookupFunctionEntry(ctx.Rip, &img, NULL);
+                if (fn) {
+                    PVOID hd = NULL;
+                    DWORD64 est = 0;
+                    RtlVirtualUnwind(UNW_FLAG_NHANDLER, img, ctx.Rip, fn, &ctx, &hd, &est, NULL);
+                } else {
+                    ctx.Rip = *(DWORD64 *)ctx.Rsp;
+                    ctx.Rsp += 8;
+                }
+            }
+        }
+        ResumeThread(h);
+    }
+    CloseHandle(h);
+    fprintf(stderr, "  [STACK] tid %lu (%d frames, program-relative or absolute):\n", tid, n);
+    for (i = 0; i < n; i++) {
+        uintptr_t a = (uintptr_t)frames[i];
+        if (a >= base && a < base + 0x10000000u)
+            fprintf(stderr, "  [STACK]   +0x%llX\n", (unsigned long long)(a - base));
+        else {
+            HMODULE m = NULL;
+            char name[MAX_PATH] = "?";
+            if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                                   GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                   (LPCSTR)a, &m) && m) {
+                const char *b;
+                GetModuleFileNameA(m, name, sizeof name);
+                b = strrchr(name, '\\');
+                fprintf(stderr, "  [STACK]   %s+0x%llX\n", b ? b + 1 : name,
+                        (unsigned long long)(a - (uintptr_t)m));
+            } else
+                fprintf(stderr, "  [STACK]   %p\n", (void *)a);
+        }
+    }
+}
+#endif
+
 /* sheroes-nx: what a stalled trap is waiting behind (first PC boot,
  * 2026-10-28: NOP(9) never taken, with a guest thread at DISPATCH). The first
  * five stalls name the threads holding IRQL raised (host return addresses,
@@ -4136,6 +4200,23 @@ static void pb_trap_stall_report(void)
     fprintf(stderr, "  [PB] stall: irq lines %08X\n", xbox_irq_lines());
 #endif
     xbox_IrqlDumpHolders();
+#ifdef _WIN32
+    {
+        extern DWORD xbox_gil_report(void);
+        extern int xbox_IrqlHolderTids(unsigned long *out, int max);
+        unsigned long tids[9];
+        int k, m = xbox_IrqlHolderTids(tids, 8);
+        DWORD g = xbox_gil_report();
+        if (g) {
+            for (k = 0; k < m && tids[k] != g; k++)
+                ;
+            if (k == m)
+                tids[m++] = g;
+        }
+        for (k = 0; k < m; k++)
+            pb_dump_thread_stack(tids[k]);
+    }
+#endif
 }
 
 static HANDLE s_driver_event;

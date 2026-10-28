@@ -120,6 +120,18 @@ static void irql_holder_drop(void)
             return;
 }
 
+/* sheroes-nx: the raised threads' ids, for a stack dump (nv2a_pb_exec.c). */
+int xbox_IrqlHolderTids(unsigned long *out, int max)
+{
+    int i, n = 0;
+    for (i = 0; i < IRQL_HOLDERS && n < max; i++) {
+        LONG t = InterlockedCompareExchange(&s_holders[i].tid, 0, 0);
+        if (t)
+            out[n++] = (unsigned long)t;
+    }
+    return n;
+}
+
 void xbox_IrqlDumpHolders(void)
 {
     int i;

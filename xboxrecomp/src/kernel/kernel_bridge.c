@@ -583,6 +583,17 @@ static CONDITION_VARIABLE s_gil_cv;
 static volatile uint64_t  s_gil_next, s_gil_serving;
 static volatile int       s_gil_on = -1;
 static RECOMP_TLS int     t_gil_depth;
+static volatile DWORD     s_gil_holder_tid;   /* sheroes-nx: for stall reports */
+
+/* sheroes-nx: the guest lock's state for a stall report (nv2a_pb_exec.c). */
+extern volatile int g_gil_contended;
+DWORD xbox_gil_report(void)
+{
+    fprintf(stderr, "  [GIL] holder tid %lu, tickets next %llu serving %llu, contended %d\n",
+            (unsigned long)s_gil_holder_tid, (unsigned long long)s_gil_next,
+            (unsigned long long)s_gil_serving, g_gil_contended);
+    return s_gil_holder_tid;
+}
 
 static int gil_enabled(void)
 {
@@ -697,12 +708,14 @@ static void gil_lock(void)
     } else if (s_gil_next - s_gil_serving <= 1) {
         g_gil_contended = 0;               /* nobody behind us */
     }
+    s_gil_holder_tid = GetCurrentThreadId();
     LeaveCriticalSection(&s_gil_cs);
 }
 
 static void gil_unlock(void)
 {
     EnterCriticalSection(&s_gil_cs);
+    s_gil_holder_tid = 0;
     s_gil_serving++;
     WakeAllConditionVariable(&s_gil_cv);
     LeaveCriticalSection(&s_gil_cs);

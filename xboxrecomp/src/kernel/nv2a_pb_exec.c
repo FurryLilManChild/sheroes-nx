@@ -3403,7 +3403,8 @@ static void raw_batch(void)
         fprintf(stderr, "[FTRACE] draw surf %08X clip %u,%u %ux%u zeta %08X xform %u vp %u prim %u"
                 " idx %u | z %u/%u/%u blend %u %X/%X cmask %08X cull %u | tex %08X %08X %08X %08X inl %d"
                 " | v0 %.1f %.1f %.4f %.3g  v1 %.1f %.1f  v2 %.1f %.1f"
-                " | d0 %08X a3 t%u s%u st%u @%08X | fin %08X/%08X aicw0 %08X f0 %08X bl %X %X/%X\n",
+                " | d0 %08X a3 t%u s%u st%u @%08X | fin %08X/%08X aicw0 %08X f0 %08X bl %X %X/%X"
+                " | sfmt %08X ctl0 %08X\n",
                 rb.color_va, s_gpu.clip_x, s_gpu.clip_y, s_gpu.clip_w, s_gpu.clip_h, rb.zeta_va,
                 rb.xform, rb.vp_start, rb.prim, rb.index_count,
                 r->depth_test_enable, r->depth_func, r->depth_write,
@@ -3413,7 +3414,8 @@ static void raw_batch(void)
                 s_gpu.idx_count ? vertex_color(s_gpu.idx[0]) : 0,
                 s_gpu.attr[3].type, s_gpu.attr[3].size, s_gpu.attr[3].stride, s_gpu.attr[3].offset,
                 s_reg[0x0288 / 4], s_reg[0x028C / 4], s_reg[0x0260 / 4], s_reg[0x0A60 / 4],
-                s_reg[0x0304 / 4], s_reg[0x0344 / 4], s_reg[0x0348 / 4]);
+                s_reg[0x0304 / 4], s_reg[0x0344 / 4], s_reg[0x0348 / 4],
+                s_reg[0x0208 / 4], s_reg[0x0290 / 4]);
     }
     s_backend->draw_raw(&rb);
     s_gpu.tris_drawn += s_gpu.idx_count / 3;

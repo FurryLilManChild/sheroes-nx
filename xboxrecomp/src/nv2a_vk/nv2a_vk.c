@@ -2678,6 +2678,11 @@ static void apply_dynamic(const uint32_t *r, int has_depth, VkPrimitiveTopology 
     d.front = r[0x3A0 / 4];
     d.topo = (uint32_t)topo;
     d.dtest = has_depth && r[0x30C / 4];
+    {   /* sheroes-nx diagnostic: RECOMP_DBG_NOZ=1 turns the depth test off. */
+        static int noz = -1;
+        if (noz < 0) noz = getenv("RECOMP_DBG_NOZ") != NULL;
+        if (noz) d.dtest = 0;
+    }
     d.dwrite = has_depth && r[0x35C / 4];
     d.dop = r[0x354 / 4];
     d.stest = has_depth && r[0x32C / 4];

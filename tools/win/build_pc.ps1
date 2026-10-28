@@ -90,6 +90,11 @@ if (-not (Test-Path (Join-Path $sdlDir 'cmake\sdl2-config.cmake'))) {
     }
 }
 
+# An earlier build_pc.ps1 installed glslang into a folder literally named '$glslangOut' (PowerShell 5.1 does not
+# expand a variable in an unquoted -DNAME=$var argument); remove it.
+$strayGlslang = Join-Path $repo '$glslangOut'
+if (Test-Path -LiteralPath $strayGlslang) { Remove-Item -LiteralPath $strayGlslang -Recurse -Force }
+
 # 2. glslang (the renderer compiles its shaders at run time), the version the Switch build uses.
 if (-not (Test-Path (Join-Path $glslangOut 'lib\cmake\glslang\glslang-config.cmake'))) {
     Step "Building glslang $glslangVer (one time, a few minutes)" 'deps_glslang.log' {
@@ -97,11 +102,11 @@ if (-not (Test-Path (Join-Path $glslangOut 'lib\cmake\glslang\glslang-config.cma
             git clone --depth 1 --branch $glslangVer https://github.com/KhronosGroup/glslang.git $glslangSrc
         }
         cmake -S $glslangSrc -B (Join-Path $deps 'glslang-build') -G Ninja -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_INSTALL_PREFIX=$glslangOut `
+            -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ "-DCMAKE_INSTALL_PREFIX=$glslangOut" `
             -DENABLE_OPT=OFF -DGLSLANG_TESTS=OFF -DENABLE_GLSLANG_BINARIES=OFF -DBUILD_SHARED_LIBS=OFF `
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
         cmake --build (Join-Path $deps 'glslang-build') -- -j $Jobs
-        cmake --install (Join-Path $deps 'glslang-build')
+        cmake --install (Join-Path $deps 'glslang-build') --prefix $glslangOut
     }
 }
 

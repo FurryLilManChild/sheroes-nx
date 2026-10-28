@@ -3404,7 +3404,7 @@ static void raw_batch(void)
                 " idx %u | z %u/%u/%u blend %u %X/%X cmask %08X cull %u | tex %08X %08X %08X %08X inl %d"
                 " | v0 %.1f %.1f %.4f %.3g  v1 %.1f %.1f  v2 %.1f %.1f"
                 " | d0 %08X a3 t%u s%u st%u @%08X | fin %08X/%08X aicw0 %08X f0 %08X bl %X %X/%X"
-                " | sfmt %08X ctl0 %08X | st %u f%X r%X m%X wm%X ops %X/%X/%X | zclip %g %g reg %08X %08X\n",
+                " | sfmt %08X ctl0 %08X | st %u f%X r%X m%X wm%X ops %X/%X/%X | zclip %g %g reg %08X %08X | cullface %X front %X area %g\n",
                 rb.color_va, s_gpu.clip_x, s_gpu.clip_y, s_gpu.clip_w, s_gpu.clip_h, rb.zeta_va,
                 rb.xform, rb.vp_start, rb.prim, rb.index_count,
                 r->depth_test_enable, r->depth_func, r->depth_write,
@@ -3418,7 +3418,9 @@ static void raw_batch(void)
                 s_reg[0x0208 / 4], s_reg[0x0290 / 4],
                 s_reg[0x032C / 4], s_reg[0x0364 / 4], s_reg[0x0368 / 4], s_reg[0x036C / 4],
                 s_reg[0x0360 / 4], s_reg[0x0370 / 4], s_reg[0x0374 / 4], s_reg[0x0378 / 4],
-                r->depth_min, r->depth_max, s_reg[0x0394 / 4], s_reg[0x0398 / 4]);
+                r->depth_min, r->depth_max, s_reg[0x0394 / 4], s_reg[0x0398 / 4],
+                s_reg[0x039C / 4], s_reg[0x03A0 / 4],
+                0.5f * ((q[1][0] - q[0][0]) * (q[2][1] - q[0][1]) - (q[2][0] - q[0][0]) * (q[1][1] - q[0][1])));
         if (rb.xform == 1) {
             const float *m = s_gpu.composite;
             float a0[4] = {0};

@@ -1105,6 +1105,17 @@ static void tex_fill(VkTex *t, uint32_t va, uint32_t layer)
     if (t->fmt != VK_FORMAT_B8G8R8A8_UNORM) {
         /* DXT as it is, with the title's mip levels (they follow level 0). */
         uint32_t l, lw = w, lh = h;
+        {   /* sheroes-nx diagnostic: RECOMP_DBG_DXT=1 logs each DXT upload */
+            static int dbg = -1;
+            if (dbg < 0) dbg = getenv("RECOMP_DBG_DXT") != NULL;
+            if (dbg) {
+                const uint8_t *b = mem + va;
+                fprintf(stderr, "[DXT] va %08X fmt %02X %ux%u lv %u: %02X%02X%02X%02X %02X%02X%02X%02X"
+                        " %02X%02X%02X%02X %02X%02X%02X%02X\n", va, color, w, h, t->levels,
+                        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7],
+                        b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
+            }
+        }
         for (l = 0; l < t->levels; l++) {
             uint32_t n = tex_bytes(color, lw, lh, 0);
             tex_upload(t, mem + va, n, 0, layer, l);

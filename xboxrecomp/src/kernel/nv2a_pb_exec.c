@@ -3404,7 +3404,7 @@ static void raw_batch(void)
                 " idx %u | z %u/%u/%u blend %u %X/%X cmask %08X cull %u | tex %08X %08X %08X %08X inl %d"
                 " | v0 %.1f %.1f %.4f %.3g  v1 %.1f %.1f  v2 %.1f %.1f"
                 " | d0 %08X a3 t%u s%u st%u @%08X | fin %08X/%08X aicw0 %08X f0 %08X bl %X %X/%X"
-                " | sfmt %08X ctl0 %08X | st %u f%X r%X m%X wm%X ops %X/%X/%X | zclip %g %g reg %08X %08X | cullface %X front %X area %g | atest %u f%X r%u | tfmt %08X tctl %08X\n",
+                " | sfmt %08X ctl0 %08X | st %u f%X r%X m%X wm%X ops %X/%X/%X | zclip %g %g reg %08X %08X | cullface %X front %X area %g | atest %u f%X r%u | tfmt %08X tctl %08X | t1 %08X %08X | cc %08X ci %08X %08X co %08X %08X ai %08X %08X ao %08X %08X | sp %08X tmode %08X\n",
                 rb.color_va, s_gpu.clip_x, s_gpu.clip_y, s_gpu.clip_w, s_gpu.clip_h, rb.zeta_va,
                 rb.xform, rb.vp_start, rb.prim, rb.index_count,
                 r->depth_test_enable, r->depth_func, r->depth_write,
@@ -3422,7 +3422,11 @@ static void raw_batch(void)
                 s_reg[0x039C / 4], s_reg[0x03A0 / 4],
                 0.5f * ((q[1][0] - q[0][0]) * (q[2][1] - q[0][1]) - (q[2][0] - q[0][0]) * (q[1][1] - q[0][1])),
                 r->alpha_test_enable, r->alpha_func, r->alpha_ref,
-                s_reg[0x1B04 / 4], s_reg[0x1B0C / 4]);
+                s_reg[0x1B04 / 4], s_reg[0x1B0C / 4],
+                s_reg[0x1B44 / 4], s_reg[0x1B4C / 4],
+                s_reg[0x1E60 / 4], s_reg[0x0AC0 / 4], s_reg[0x0AC4 / 4],
+                s_reg[0x1E40 / 4], s_reg[0x1E44 / 4], s_reg[0x0260 / 4], s_reg[0x0264 / 4],
+                s_reg[0x0AA0 / 4], s_reg[0x0AA4 / 4], s_reg[0x1E70 / 4], s_reg[0x1E78 / 4]);
         if (rb.xform == 1) {
             const float *m = s_gpu.composite;
             float a0[4] = {0};

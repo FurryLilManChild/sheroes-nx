@@ -15,6 +15,7 @@
 #ifdef _WIN32
 #  include <windows.h>
 #  include <dbghelp.h>
+#  include <timeapi.h>
 #else
 #  include <signal.h>
 #  include <unistd.h>
@@ -316,6 +317,13 @@ static int game_main(void)
 
     printf("=== Sonic Heroes (Xbox) - static recompilation ===\n");
     install_crash_reporter();
+#ifdef _WIN32
+    /* sheroes-nx: 1 ms timer resolution. Windows rounds every short sleep up
+     * to its 15.6 ms default tick, and the runtime waits in 1 ms steps
+     * everywhere (the 60 Hz vblank clock, the guest lock, the executor); the
+     * first PC title screen ran slowly. winmm is linked already. */
+    timeBeginPeriod(1);
+#endif
     if (getenv("NFSU2_EXIT_TRACE"))
         atexit(print_guest_state);
 

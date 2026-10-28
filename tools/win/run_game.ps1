@@ -21,6 +21,8 @@ $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $log = Join-Path $logDir "${Kind}_$stamp.log"
 
 $env:NFSU2_GAME_DIR = $game
+# A frame-rate line every 10 s ([fps] in the log); a -Env setting still wins.
+if (-not $env:RECOMP_FPS_LOG) { $env:RECOMP_FPS_LOG = '1' }
 foreach ($kv in $Env) {
     if ($kv -match '^([^=]+)=(.*)$') { Set-Item -Path "env:$($matches[1])" -Value $matches[2]; Write-Host "  test switch: $kv" }
 }

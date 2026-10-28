@@ -21,6 +21,10 @@
   main thread held the guest lock spinning in D3D's fence wait (sub_0032FC10_gen), the timer thread waited for the
   lock at DISPATCH to run the PGRAPH ISR. recomp_types.h's poll-loop hint took the `_MSC_VER` branch under clang (a
   bare pause, never yielding the lock); now cl only. build_pc.ps1 re-lifts when that template changes.
+- Boot 3: the title screen on Mark's PC (AMD Radeon, Vulkan 1.4.344, swapchain 1280x720), correct logo, sky, Press
+  START and the fade on Enter; Mark reached the next menus. About 52 frames/s by the screenshot times, and slow by
+  eye. Nothing called timeBeginPeriod, so every 1 ms wait (vblank clock, guest lock, executor) took a 15.6 ms tick:
+  timeBeginPeriod(1) at startup. run_game.ps1 turns on RECOMP_FPS_LOG.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

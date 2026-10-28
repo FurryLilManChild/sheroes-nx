@@ -319,6 +319,11 @@ void nv2a_fog_params(const uint32_t *regs, uint32_t xform, float out[4])
         out[3] = 0.0f;
     else
         out[3] = regs[0x02A4 / 4] ? 2.0f : 1.0f; /* SET_FOG_ENABLE */
+    {   /* sheroes-nx diagnostic: RECOMP_DBG_NOFOG=1 turns fog off. */
+        static int nofog = -1;
+        if (nofog < 0) nofog = getenv("RECOMP_DBG_NOFOG") != NULL;
+        if (nofog && out[3] > 1.5f) out[3] = 1.0f;
+    }
 }
 
 int nv2a_gl_psh(const Nv2aPshKey *k, char *buf, size_t cap)

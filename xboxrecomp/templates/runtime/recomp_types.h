@@ -282,13 +282,19 @@ static inline uint32_t recomp_atomic_cas32(volatile void *p, uint32_t cmp, uint3
  * hint every turn, a wake for the runtime's sleeping hardware threads every
  * 16, a host yield every 64 -- which also hands the guest lock (kernel_bridge.c)
  * to whichever guest thread, ISR or DPC the loop is waiting for. */
-#if defined(_MSC_VER)
+/* sheroes-nx: cl only. clang on Windows defines _MSC_VER too, and took this
+ * branch: a poll loop then never handed the guest lock over, so D3D's fence
+ * wait (BlockOnTime) spun under it while the timer thread waited for it to
+ * run the PGRAPH ISR the wait needed (PC boot, 2026-10-28). */
+#if defined(_MSC_VER) && !defined(__clang__)
 #define RECOMP_SPIN_HINT() _mm_pause()
 extern volatile int g_gil_contended;
 void recomp_preempt(void);
 #define RECOMP_PREEMPT() do { if (g_gil_contended) recomp_preempt(); } while (0)
 #else
+#if !defined(_WIN32)
 #include <sched.h>
+#endif
 void recomp_spin_wake(void);        /* runtime: wake the hardware threads */
 void recomp_spin_yield(void);       /* runtime: yield, and the guest lock with it */
 /* At every lifted function entry: yield if another guest thread has been

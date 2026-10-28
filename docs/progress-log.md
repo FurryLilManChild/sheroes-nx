@@ -16,6 +16,11 @@
   0xFED00000 (OHCI) from XPP 0x0037F812. ohci.c protected its registers on Windows for a VEH that this project does
   not have; XPP is lifted with --mmio-sections, so the model is now registered with the MMIO accessors on Windows
   too, as on Linux (the VEH path stays behind XBOX_OHCI_VEH).
+- Boot 2 ran 60 s but stalled before the first frame: NOP(9) never taken. A stall report (IRQL holders, the guest
+  lock holder, their host stacks resolved with a linker map, out/pc/sheroes_recomp.map) showed the deadlock: the
+  main thread held the guest lock spinning in D3D's fence wait (sub_0032FC10_gen), the timer thread waited for the
+  lock at DISPATCH to run the PGRAPH ISR. recomp_types.h's poll-loop hint took the `_MSC_VER` branch under clang (a
+  bare pause, never yielding the lock); now cl only. build_pc.ps1 re-lifts when that template changes.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

@@ -149,8 +149,11 @@ def _load_seed_functions(path, observed=None):
         if isinstance(entry, dict) and "start" in entry:
             addr = int(entry["start"], 16)
             addrs.append(addr)
+            # sheroes-nx: "verified" -- checked by hand that the bytes before
+            # it are a data table the sweep walked as code (its note says how);
+            # trusted past the mid-instruction guard like an observed seed.
             if observed is not None and (
-                    entry.get("observed")
+                    entry.get("observed") or entry.get("verified")
                     or "observed at runtime" in entry.get("note", "")):
                 observed.add(addr)
         elif isinstance(entry, int):

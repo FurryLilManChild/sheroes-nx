@@ -29,6 +29,14 @@
   story, Team Sonic (models on team select look wrong; screenshot to come), then a crash as the story's first
   Sofdec movie started: ICALL to 0x0035C1C0, the PSFD_I section, which had no functions, nor had PSFD_P. Each is
   one integer-only function, the I and P picture handlers in the CRI decoder's table at 0x003DB1D4. Seeded both.
+- Play 2: the movie got further, then ICALL to 0x0031E010, a CRI callback stored with MEM32(reg+0x12EC) = 0x31E010,
+  in a 5 KB gap no function covered (one 13.9 KB function with two jump tables). Seeded. Then two sweeps so a stage
+  load does not find the next one: constant code addresses written to memory (only 0x0031E010) and
+  tools/table_sweep.py, pointers in .rdata/.data tables beside known functions: 0x0021A780 and 0x0023D460 (object
+  factories in type descriptors, allocating 0x320 and 0x35C bytes), 0x00272110, 0x00089250, 0x0011D020. Three
+  sat right after jump-table index bytes the disassembler's sweep decoded as code, so it rejected them as
+  mid-instruction; seeds can now carry "verified": true (checked by hand, stated in the note), trusted like
+  observed ones (tools/disasm/__main__.py).
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

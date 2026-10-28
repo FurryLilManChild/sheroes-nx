@@ -561,7 +561,8 @@
  },
  {
   "start": "0x0021A780",
-  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [0x5456d8]; push 0x320'"
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; not inside any known function; starts 'mov ecx, dword ptr [0x5456d8]; push 0x320' Verified: the 16 bytes before are a jump table's byte-index map (07 07 07 07 02 07 07 03 ...), which the linear sweep decoded as code and ran through the start; the disassembler rejected it as mid-instruction.",
+  "verified": true
  },
  {
   "start": "0x00225810",
@@ -609,7 +610,8 @@
  },
  {
   "start": "0x00272110",
-  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00271F40; starts 'mov eax, dword ptr [0x60e404]; test eax, eax'"
+  "note": "seed_sweep.py [pad] 2026-10-27 (run2): .text: follows int3 padding, 16-byte aligned; inside sub_00271F40; starts 'mov eax, dword ptr [0x60e404]; test eax, eax' Verified: the bytes before are a byte-index map (06 06 ... 05) and int3 padding; the disassembler rejected it as mid-instruction.",
+  "verified": true
  },
  {
   "start": "0x0027C230",
@@ -646,5 +648,30 @@
  {
   "start": "0x0035CE40",
   "note": "PC play test 2026-10-28, with 0x0035C1C0: the whole PSFD_P section (1552 bytes, one function, ends ret 0x0035D44E), the P-picture handler at 0x003DB1D8 in the CRI decoder's table at 0x003DB1D4; never translated (PSFD_P had no functions)."
+ },
+ {
+  "start": "0x0031E010",
+  "note": "PC play test 2 2026-10-28: '[ICALL] Failed to resolve VA 0x0031E010' a moment into the story's opening Sofdec movie (after the PSFD_I/PSFD_P seeds). Stored as a callback: MEM32(reg + 0x12EC) = 0x31E010, three stores in the CRI code (a sweep of constant code addresses written to memory found no other missing target). Not inside any known function: it starts the 5 KB gap after sub_0031A580's tables (0x0031DB78 jump table, 0x0031E000 level table); 'sub esp, 8; mov edx, [esp+0x10]; push ebx', jump tables at 0x0032164C and 0x0032166C."
+ },
+ {
+  "start": "0x0021A780",
+  "note": "vtable/descriptor sweep 2026-10-28 (pointers in .rdata/.data into code, not a known start, beside known starts): third handler of the object-type descriptor at 0x0052AE24 (0x00217F00, 0x00218030, this), referenced at 0x0052AE30; an object factory: 'mov ecx, [0x5456D8]; push 0x320; call 0x00012290' (allocate 0x320 bytes). Never translated; likely a stage object, found before a stage load could reach it."
+ },
+ {
+  "start": "0x0023D460",
+  "note": "vtable/descriptor sweep 2026-10-28: the same descriptor shape at 0x0052D478 (0x0023C2A0, 0x0023C400, this), referenced at 0x0052D484; factory 'mov ecx, [0x5456D8]; push 0x35C; call 0x00012290'. Verified: the bytes before are a byte-index map (0f 0f 0f ... 08 09 0a 0b 0c 0d 0e); the disassembler rejected it as mid-instruction.",
+  "verified": true
+ },
+ {
+  "start": "0x00272110",
+  "note": "vtable/descriptor sweep 2026-10-28: in the table at 0x00533D9C among 0x002726D0, 0x002729C0, 0x00272360, 0x00271F40, 0x002722E0 (all known), referenced at 0x00533DB4; after int3 padding, 'mov eax, [0x60E404]; test eax, eax'. The static pass had it inside the function before (splits it)."
+ },
+ {
+  "start": "0x00089250",
+  "note": "vtable/descriptor sweep 2026-10-28: vtable at 0x00391DC8 (0x0008A520, 0x000891B0, this, 0x00089420), referenced at 0x00391DDC; 'mov eax, [0x59A490]; sub esp, 0x14; push ebx', 459 bytes, in a gap no function covered."
+ },
+ {
+  "start": "0x0011D020",
+  "note": "vtable/descriptor sweep 2026-10-28: vtable at 0x003B25F0 (0x0011CAE0, 0x0011D390, this, 0x0011CB60), referenced at 0x003B2600; thiscall 'push esi; mov esi, ecx; push edi', 826 bytes, in a gap no function covered."
  }
 ]

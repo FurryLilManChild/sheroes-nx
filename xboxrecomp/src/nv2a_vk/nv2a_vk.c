@@ -2710,7 +2710,12 @@ static void apply_dynamic(const uint32_t *r, int has_depth, VkPrimitiveTopology 
          * window y runs the other way. Swapped here too, every culled draw
          * (29 a frame in the main menu: headlight glass, grille) lost its
          * front faces and kept its back ones. */
-        p_front_face(s_cb, d.front == 0x901 ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE);
+    {   /* sheroes-nx diagnostic: RECOMP_DBG_FLIPFRONT=1 swaps the winding. */
+        static int flip = -1;
+        if (flip < 0) flip = getenv("RECOMP_DBG_FLIPFRONT") != NULL;
+        p_front_face(s_cb, (d.front == 0x901) != (flip != 0) ? VK_FRONT_FACE_COUNTER_CLOCKWISE
+                                                             : VK_FRONT_FACE_CLOCKWISE);
+    }
     if (!s_dyn_valid || d.topo != s_dyn.topo)
         p_topology(s_cb, topo);
     if (!s_dyn_valid || d.dtest != s_dyn.dtest) p_depth_test(s_cb, d.dtest);

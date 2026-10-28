@@ -1458,6 +1458,18 @@ static void bind_stage(const uint32_t *regs, int i, float scale[2], VkDescriptor
     s_palette_reg = regs[base + 8];
     s_palette_va = s_batch->pal_va[i];
     rt = cube ? NULL : surf_find(va);
+    /* sheroes-nx: the NV2A cannot render into DXT or palettized formats, so a
+     * texture in one of them is never a render target. A surface found at its
+     * address is a stale one whose memory the title has since reused: Sonic
+     * Heroes loads its stage textures where the loading screen's surfaces
+     * were, and the stage sampled their white clear colour (white ground). */
+    if (rt && (color == 0x0C || color == 0x0E || color == 0x0F || color == 0x0B)) {
+        static int shown;
+        if (shown++ < 5)
+            fprintf(stderr, "[VK] texture 0x%08X (format 0x%02X) at a stale surface; decoding it\n",
+                    va, color);
+        rt = NULL;
+    }
     if (cube) {
         /* SET_TEXTURE_FORMAT bit 2: CUBEMAP_ENABLE; mip levels in [19:16]. */
         if (cube_on && (format & 4)) {

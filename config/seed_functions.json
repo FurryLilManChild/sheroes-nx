@@ -638,5 +638,13 @@
  {
   "start": "0x00382C3E",
   "note": "seed_sweep.py [gap] 2026-10-27 (run2): XPP: right after the end of sub_00382BEC, no function starts there; not inside any known function; starts 'mov eax, ecx; mov ecx, dword ptr [eax + 0x66]'"
+ },
+ {
+  "start": "0x0035C1C0",
+  "note": "PC play test 2026-10-28: '[ICALL] Failed to resolve VA 0x0035C1C0' as the story's first Sofdec movie started (after team select). The whole PSFD_I section (968 bytes, one function, ends ret 0x0035C585), plain integer code; reached through the CRI decoder's handler table at 0x003DB1D4 (I picture), beside 0x0035CE40, 0x0035C7A0, 0x00321DD0."
+ },
+ {
+  "start": "0x0035CE40",
+  "note": "PC play test 2026-10-28, with 0x0035C1C0: the whole PSFD_P section (1552 bytes, one function, ends ret 0x0035D44E), the P-picture handler at 0x003DB1D8 in the CRI decoder's table at 0x003DB1D4; never translated (PSFD_P had no functions)."
  }
 ]

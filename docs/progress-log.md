@@ -25,6 +25,10 @@
   START and the fade on Enter; Mark reached the next menus. About 52 frames/s by the screenshot times, and slow by
   eye. Nothing called timeBeginPeriod, so every 1 ms wait (vblank clock, guest lock, executor) took a 15.6 ms tick:
   timeBeginPeriod(1) at startup. run_game.ps1 turns on RECOMP_FPS_LOG.
+- Play 1 (Mark): 58.7 to 59.5 fps on the menus, sound clean. Title, save creation (text missing letters), 1 player,
+  story, Team Sonic (models on team select look wrong; screenshot to come), then a crash as the story's first
+  Sofdec movie started: ICALL to 0x0035C1C0, the PSFD_I section, which had no functions, nor had PSFD_P. Each is
+  one integer-only function, the I and P picture handlers in the CRI decoder's table at 0x003DB1D4. Seeded both.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

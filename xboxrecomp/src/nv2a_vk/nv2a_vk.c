@@ -1425,6 +1425,16 @@ static void bind_stage(const uint32_t *regs, int i, float scale[2], VkDescriptor
     *sampled = NULL;
     if (!(control0 & 0x40000000u) || !regs[base])
         return;
+    {   /* sheroes-nx diagnostic: RECOMP_DBG_TEXOFF=<mask> samples the transparent
+         * dummy for the stages in the mask. */
+        static int texoff = -1;
+        if (texoff < 0) {
+            const char *e = getenv("RECOMP_DBG_TEXOFF");
+            texoff = e ? (int)strtol(e, NULL, 0) : 0;
+        }
+        if (texoff & (1 << i))
+            return;
+    }
     va = s_batch->tex_va[i];
     if (tex_size_from_format(color)) {
         uint32_t most;

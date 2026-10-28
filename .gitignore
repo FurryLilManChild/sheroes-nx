@@ -93,3 +93,9 @@ out/
 *.bsp
 *.prs
 tools_tmp/
+
+# Renderer caches written next to the program on a run
+progcache.bin
+vkpipecache.bin
+vkpipes.bin
+vkspirv.bin

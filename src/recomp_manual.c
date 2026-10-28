@@ -304,6 +304,39 @@ void sub_00293430(void)
     sub_00293430_gen();
 }
 
+/* zlib 1.1.3 inflate(z_streamp, int flush) at 0x0029B4E0 ("incorrect header
+ * check", "invalid window size", "incorrect data check", "need dictionary"
+ * are referenced only there; inflate_blocks 0x002A06E0, inflate_codes
+ * 0x002A16B0, inflate_fast 0x002A22E0). Diagnostic: every PNG failed with
+ * libpng's "Decompression error" (PC play test, 2026-10-28), so a failing
+ * call reports zlib's own message and how far the stream got. z_stream
+ * (32-bit): next_in +0, avail_in +4, total_in +8, next_out +0xC, avail_out
+ * +0x10, total_out +0x14, msg +0x18, state +0x1C. */
+extern void sub_0029B4E0_gen(void);
+
+void sub_0029B4E0(void)
+{
+    uint32_t strm = MEM32(esp + 4), flush = MEM32(esp + 8);
+    uint32_t in0 = strm ? MEM32(strm + 8) : 0, out0 = strm ? MEM32(strm + 0x14) : 0;
+    sub_0029B4E0_gen();
+    if (eax != 0) {                     /* anything but Z_OK */
+        static unsigned n;
+        char text[64] = "";
+        uint32_t msg = strm ? MEM32(strm + 0x18) : 0;
+        unsigned k;
+        for (k = 0; msg && k + 1 < sizeof text; k++) {
+            char c = (char)MEM8(msg + k);
+            if (!c) break;
+            text[k] = c;
+        }
+        text[k] = 0;
+        if (n++ < 32)
+            fprintf(stderr, "[ZLIB] inflate -> %d \"%s\" flush %u: in %u..%u (avail %u), out %u..%u (avail %u)\n",
+                    (int32_t)eax, text, flush, in0, MEM32(strm + 8), MEM32(strm + 4),
+                    out0, MEM32(strm + 0x14), MEM32(strm + 0x10));
+    }
+}
+
 /* ── Manual function overrides ─────────────────────────────── */
 
 /*

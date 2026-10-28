@@ -3443,8 +3443,9 @@ static void raw_batch(void)
             float q0[4];
             if (fetch_position(s_gpu.idx[0], q0) && q0[2] < 0.01f * 16777215.0f) {
                 static int shown;
-                if (shown++ < 3)
-                    fprintf(stderr, "[DBG] skipped near quad z %g\n", q0[2]);
+                if (shown++ < 3 || shown % 300 == 0)
+                    fprintf(stderr, "[DBG] skipped near quad z %g (#%d, frame %u)\n", q0[2], shown,
+                            s_gpu.flips);
                 return;
             }
         }

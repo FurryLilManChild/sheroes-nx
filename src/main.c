@@ -276,14 +276,11 @@ int main(int argc, char **argv)
 
     (void)argc;
     (void)argv;
-    /* CoD-nx defaults (the env file still wins): CoD's first console test
-     * (2026-10-27) ran at the stock 1020 MHz CPU with the game thread at
-     * 90-99% of a core and the APU at 40-85% of real time (slow, garbled
-     * sound). The clocks the NFS and Burnout ports run at; the GL submission
-     * thread and the guest lock handed over by priority (NFSU1's env file). */
-    setenv("NFSU2_CPU_MHZ", "1785", 0);
-    setenv("NFSU2_GPU_MHZ", "768", 0);
-    setenv("NFSU2_MEM_MHZ", "1600", 0);
+    /* Stock clocks by default (Mark, 2026-10-29: target good performance at
+     * stock first). The CoD-nx defaults raised them to 1785 / 768 / 1600 MHz;
+     * NFSU2_CPU_MHZ / _GPU_MHZ / _MEM_MHZ in sheroes_env.txt still do. The GL
+     * submission thread and the guest lock handed over by priority stay
+     * (NFSU1's env file). */
     setenv("RECOMP_GL_THREAD", "1", 0);
     setenv("RECOMP_GIL_EAGER", "1", 0);
     switch_boot();

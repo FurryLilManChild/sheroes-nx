@@ -127,6 +127,12 @@ BOOL  DuplicateHandle(HANDLE srcProc, HANDLE src, HANDLE dstProc,
 /* fd-backed handle, used by the file-I/O HLE (kernel_file.c). Lets file
  * handles flow through the same CloseHandle path as every other object. */
 HANDLE      w32_open_handle(int fd, const char *host_path);
+/* sheroes-nx: a file handle whose descriptor may be closed while unused and
+ * reopened with `flags` (O_CREAT/O_EXCL/O_TRUNC dropped) on next use, so the
+ * guest can hold more files open than the host allows. */
+HANDLE      w32_open_handle_reopenable(int fd, const char *host_path, int flags);
+void        w32_fd_make_room(void);
+void        w32_fd_shed(void);
 int         w32_handle_fd(HANDLE h);
 const char *w32_handle_path(HANDLE h);
 

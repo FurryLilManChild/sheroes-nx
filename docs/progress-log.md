@@ -1,5 +1,19 @@
 # Progress log (newest first)
 
+## 2026-10-29: Switch test 3, the 512-file limit
+
+- NOW LOADING again, but not the old cause. The game opens every file on the disc at boot (a file table, about
+  3,900 opens from 7 s to 45 s on the SD card) and keeps the handles. Horizon allows a process about 512 open
+  files: open 514 onward failed with EMFILE (logged as 0xC0000001, win32 err 0), so the sound banks
+  (DVD\sound\bank*.pac) and the se_*_tbl.bin tables never opened, and the main thread spun on a critical section
+  (29 million RtlEnter/LeaveCriticalSection) waiting for them. On Windows the handles cost nothing.
+- Fix (win32_compat.c, kernel_file.c): descriptor recycling. At most 256 host descriptors stay open; past that the
+  least recently used file handles are closed (position kept) and reopened on their next use; an EMFILE retries
+  after freeing 32. The guest's handles stay valid. Checked with a small test under ulimit -n 100: 600 files open,
+  read in two passes across evictions, all contents and positions right.
+- Clocks: the CoD-nx defaults raised them to 1785 / 768 / 1600 MHz; now stock unless sheroes_env.txt asks.
+- Also seen: the file table scan takes about 38 s on the SD card (about 10 ms per open). A later improvement.
+
 ## 2026-10-29: first Switch build since the PC fixes
 
 - PC play test 15: the streaks, Espio and the odd sea spray are gone; about 59 fps. The log confirms the cause:

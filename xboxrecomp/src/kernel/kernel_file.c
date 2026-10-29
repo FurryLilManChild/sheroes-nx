@@ -910,7 +910,14 @@ NTSTATUS __stdcall xbox_NtCreateFile(
         fd = open(host_path, O_RDONLY | O_DIRECTORY);
 #endif
     } else {
+        /* sheroes-nx: keep the host's open-file count under its limit (see
+         * w32_open_handle_reopenable); retry once after freeing some. */
+        w32_fd_make_room();
         fd = open(host_path, posix_open_flags(DesiredAccess, CreateDisposition), 0644);
+        if (fd < 0 && (errno == EMFILE || errno == ENFILE)) {
+            w32_fd_shed();
+            fd = open(host_path, posix_open_flags(DesiredAccess, CreateDisposition), 0644);
+        }
     }
 
     if (fd < 0 && fd != XBOX_DIR_FD) {
@@ -923,7 +930,8 @@ NTSTATUS __stdcall xbox_NtCreateFile(
         return errno_to_status(e);
     }
 
-    *FileHandle = w32_open_handle(fd, host_path);
+    *FileHandle = fd == XBOX_DIR_FD ? w32_open_handle(fd, host_path)
+        : w32_open_handle_reopenable(fd, host_path, posix_open_flags(DesiredAccess, CreateDisposition));
     if (IoStatusBlock) {
         IoStatusBlock->Status = STATUS_SUCCESS;
         IoStatusBlock->Information = (CreateDisposition == XBOX_FILE_CREATE) ? 2 : 1;

@@ -25,6 +25,8 @@
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <unistd.h>
 #include <sched.h>
 #include <fenv.h>
@@ -327,6 +329,11 @@ typedef struct w32_object {
     int             fd;
     SIZE_T          map_size;
     char           *file_path;
+    /* sheroes-nx: descriptor recycling (w32_fd_make_room) */
+    int             fd_flags;        /* open() flags to reopen with; -1: never closed early */
+    int             fd_evicted;      /* closed to free a descriptor; reopened on use */
+    off_t           fd_pos;          /* file position when it was closed */
+    uint64_t        fd_used;         /* last use, for least-recently-used */
 } w32_object;
 
 /* pseudo handles for "current thread"/"current process" */
@@ -443,13 +450,17 @@ static w32_object *obj_alloc(w32_kind kind)
     return o;
 }
 
+static void w32_fd_closed(void);
 static void obj_release(w32_object *o)
 {
     if (InterlockedDecrement(&o->refcount) > 0)
         return;
     reg_remove(o);
     if (o->kind == K_FILE) {
-        if (o->fd >= 0) close(o->fd);
+        if (o->fd >= 0) {
+            close(o->fd);
+            w32_fd_closed();
+        }
         free(o->file_path);
     } else if (o->kind == K_FILEMAP) {
         if (o->fd >= 0) close(o->fd);
@@ -463,18 +474,133 @@ static void obj_release(w32_object *o)
 }
 
 /* ---- fd-backed file handle (for the file-I/O HLE) -------------------- */
-HANDLE w32_open_handle(int fd, const char *host_path)
+
+/* sheroes-nx: descriptor recycling. Horizon gives a process about 512 open
+ * files, and Sonic Heroes opens every file on the disc at boot (about 3,900)
+ * and keeps the handles: on the Switch the 513th open failed (EMFILE) and
+ * every later one with it, sound banks included, and the game sat at NOW
+ * LOADING (Switch test 3, 2026-10-29). The Xbox has no such limit, so the
+ * runtime keeps at most W32_FD_CAP host descriptors: before an open past the
+ * cap the least recently used file handle is closed (its position kept), and
+ * reopened the next time a call needs its descriptor (w32_handle_fd). The
+ * guest's handle stays valid throughout. */
+#define W32_FD_CAP 256
+static pthread_mutex_t s_fd_mx = PTHREAD_MUTEX_INITIALIZER;
+static int             s_fd_live;
+static uint64_t        s_fd_tick;
+
+static void w32_fd_closed(void)
+{
+    pthread_mutex_lock(&s_fd_mx);
+    s_fd_live--;
+    pthread_mutex_unlock(&s_fd_mx);
+}
+
+/* Close least-recently-used reopenable descriptors until fewer than `keep`
+ * are open: one registry scan collects the candidates, the oldest go. Under
+ * s_fd_mx; the registry lock is held while closing, so obj_release cannot
+ * free a victim meanwhile. */
+static int fd_used_cmp(const void *a, const void *b)
+{
+    uint64_t x = (*(w32_object *const *)a)->fd_used, y = (*(w32_object *const *)b)->fd_used;
+    return x < y ? -1 : x > y;
+}
+
+static void fd_evict_locked(int keep)
+{
+    static w32_object *cand[1024];
+    static int shown;
+    int n = 0, k, need = s_fd_live - keep + 1;
+    uint32_t i;
+    if (s_fd_live < keep)
+        return;
+    pthread_mutex_lock(&s_reg_lock);
+    for (i = 0; i < W32_REG_SIZE && n < 1024; i++) {
+        w32_object *o = s_reg[i];
+        if (!o || o == W32_REG_TOMB || o->kind != K_FILE || o->fd < 0
+            || o->fd_flags < 0 || o->fd_evicted || !o->file_path)
+            continue;
+        cand[n++] = o;
+    }
+    qsort(cand, (size_t)n, sizeof cand[0], fd_used_cmp);
+    for (k = 0; k < n && k < need; k++) {
+        w32_object *v = cand[k];
+        v->fd_pos = lseek(v->fd, 0, SEEK_CUR);
+        close(v->fd);
+        v->fd = -1;
+        v->fd_evicted = 1;
+        s_fd_live--;
+        if (shown++ < 3)
+            fprintf(stderr, "  [FILE] host file limit: closed %s until it is used again\n",
+                    v->file_path);
+    }
+    pthread_mutex_unlock(&s_reg_lock);
+}
+
+void w32_fd_make_room(void)
+{
+    pthread_mutex_lock(&s_fd_mx);
+    if (s_fd_live >= W32_FD_CAP)
+        fd_evict_locked(W32_FD_CAP - 64);
+    pthread_mutex_unlock(&s_fd_mx);
+}
+
+/* After an open failed with EMFILE / ENFILE: free a batch. */
+void w32_fd_shed(void)
+{
+    pthread_mutex_lock(&s_fd_mx);
+    fd_evict_locked(s_fd_live > 32 ? s_fd_live - 32 : 0);
+    pthread_mutex_unlock(&s_fd_mx);
+}
+
+HANDLE w32_open_handle_reopenable(int fd, const char *host_path, int flags)
 {
     w32_object *o = obj_alloc(K_FILE);
     o->fd        = fd;
     o->file_path = host_path ? strdup(host_path) : NULL;
+    o->fd_flags  = flags < 0 ? -1 : (flags & ~(O_CREAT | O_EXCL | O_TRUNC));
+    pthread_mutex_lock(&s_fd_mx);
+    o->fd_used = ++s_fd_tick;
+    if (fd >= 0)
+        s_fd_live++;
+    pthread_mutex_unlock(&s_fd_mx);
     return (HANDLE)o;
+}
+
+HANDLE w32_open_handle(int fd, const char *host_path)
+{
+    return w32_open_handle_reopenable(fd, host_path, -1);
 }
 
 int w32_handle_fd(HANDLE h)
 {
     w32_object *o = obj_from(h);
-    return (o && o->kind == K_FILE) ? o->fd : -1;
+    int fd;
+    if (!o || o->kind != K_FILE)
+        return -1;
+    pthread_mutex_lock(&s_fd_mx);
+    o->fd_used = ++s_fd_tick;
+    if (o->fd_evicted) {
+        if (s_fd_live >= W32_FD_CAP)
+            fd_evict_locked(W32_FD_CAP - 64);
+        fd = open(o->file_path, o->fd_flags);
+        if (fd < 0 && (errno == EMFILE || errno == ENFILE)) {
+            fd_evict_locked(s_fd_live > 32 ? s_fd_live - 32 : 0);
+            fd = open(o->file_path, o->fd_flags);
+        }
+        if (fd >= 0) {
+            if (o->fd_pos > 0)
+                lseek(fd, o->fd_pos, SEEK_SET);
+            o->fd = fd;
+            o->fd_evicted = 0;
+            s_fd_live++;
+        } else {
+            fprintf(stderr, "  [FILE] reopen of %s failed (errno %d)\n", o->file_path, errno);
+        }
+    }
+    fd = o->fd;
+    pthread_mutex_unlock(&s_fd_mx);
+    return fd;
 }
 
 const char *w32_handle_path(HANDLE h)
@@ -2055,9 +2181,14 @@ HANDLE CreateFileA(LPCSTR name, DWORD access, DWORD share,
     char norm[1024];
     snprintf(norm, sizeof(norm), "%s", name);
     xbox_path_normalize(norm);
+    w32_fd_make_room();
     int fd = open(norm, rw | extra, 0644);
+    if (fd < 0 && (errno == EMFILE || errno == ENFILE)) {
+        w32_fd_shed();
+        fd = open(norm, rw | extra, 0644);
+    }
     if (fd < 0) { SetLastError(ERROR_FILE_NOT_FOUND); return INVALID_HANDLE_VALUE; }
-    return w32_open_handle(fd, name);
+    return w32_open_handle_reopenable(fd, norm, rw | extra);
 }
 
 HANDLE CreateFileW(LPCWSTR name, DWORD access, DWORD share,

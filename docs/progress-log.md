@@ -1,5 +1,19 @@
 # Progress log (newest first)
 
+## 2026-10-29: Switch test 4, playable but slow; a fair dispatch lock
+
+- The descriptor recycling worked: past NOW LOADING into the first stage, none of the PC rendering problems back.
+  Slow in movies, menus and the stage (stock clocks, verbose log on).
+- The [perf] lines: in the stage the vblank fell to 0.5-7 Hz while the game thread ran at 93-95% of a core
+  (menus: 56-58 Hz). The vblank counter only advances on the timer thread, which raises to DISPATCH (the dispatch
+  lock, a plain mutex) before each tick; the game thread raises and lowers IRQL thousands of times a second and, on
+  Horizon, kept taking the mutex straight back. Fix (kernel_hal.c): a ticket lock for DISPATCH, first come first
+  served, on by default on the Switch (RECOMP_FAIR_DISPATCH=0 off; =1 on elsewhere).
+- The verbose log (RECOMP_QUIET=0) wrote about 250 lines a second to the SD card in the stage; the test env file
+  now keeps only RECOMP_FPS_LOG=1.
+- Still to look at: the game thread itself near a full core at 1020 MHz (movies decode in lifted code); options are
+  the LTO build (switch/build.sh LTO=1) and profiling the hottest guest functions.
+
 ## 2026-10-29: Switch test 3, the 512-file limit
 
 - NOW LOADING again, but not the old cause. The game opens every file on the disc at boot (a file table, about

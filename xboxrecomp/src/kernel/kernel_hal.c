@@ -200,10 +200,83 @@ static void irql_track(KIRQL old_level, KIRQL new_level, void *ra)
 static CRITICAL_SECTION g_dispatch_lock;
 static INIT_ONCE        g_dispatch_once = INIT_ONCE_STATIC_INIT;
 
+/* sheroes-nx: a fair (first come, first served) dispatch lock.
+ *
+ * A plain mutex lets the thread that just released it take it straight back.
+ * Sonic Heroes' game thread raises and lowers IRQL thousands of times a
+ * second in a stage, and on Horizon the timer thread waiting to deliver the
+ * vblank kept losing that race: in Switch test 4 the vblank fell from 60 to
+ * 0.5-7 Hz in the stage while the game thread ran at 95% of a core, and the
+ * game slowed with it. Tickets hand the lock to waiters in order. On by
+ * default on the Switch; RECOMP_FAIR_DISPATCH=1 elsewhere, =0 to turn off. */
+static int              g_fair_dispatch;
+static CRITICAL_SECTION g_fair_cs;
+static CONDITION_VARIABLE g_fair_cv;
+static uint64_t         g_fair_next, g_fair_serving;
+static DWORD            g_fair_owner;
+static int              g_fair_depth;
+
+static int fair_try(void)
+{
+    DWORD me = GetCurrentThreadId();
+    int ok = 0;
+    EnterCriticalSection(&g_fair_cs);
+    if (g_fair_depth && g_fair_owner == me) {
+        g_fair_depth++;
+        ok = 1;
+    } else if (g_fair_next == g_fair_serving) {
+        g_fair_next++;
+        g_fair_owner = me;
+        g_fair_depth = 1;
+        ok = 1;
+    }
+    LeaveCriticalSection(&g_fair_cs);
+    return ok;
+}
+
+static void fair_enter(void)
+{
+    DWORD me = GetCurrentThreadId();
+    uint64_t t;
+    EnterCriticalSection(&g_fair_cs);
+    if (g_fair_depth && g_fair_owner == me) {
+        g_fair_depth++;
+        LeaveCriticalSection(&g_fair_cs);
+        return;
+    }
+    t = g_fair_next++;
+    while (t != g_fair_serving)
+        SleepConditionVariableCS(&g_fair_cv, &g_fair_cs, INFINITE);
+    g_fair_owner = me;
+    g_fair_depth = 1;
+    LeaveCriticalSection(&g_fair_cs);
+}
+
+static void fair_leave(void)
+{
+    EnterCriticalSection(&g_fair_cs);
+    if (g_fair_depth && --g_fair_depth == 0) {
+        g_fair_owner = 0;
+        g_fair_serving++;
+        WakeAllConditionVariable(&g_fair_cv);
+    }
+    LeaveCriticalSection(&g_fair_cs);
+}
+
 static BOOL CALLBACK dispatch_lock_init(PINIT_ONCE o, PVOID p, PVOID *c)
 {
+    const char *e = getenv("RECOMP_FAIR_DISPATCH");
     (void)o; (void)p; (void)c;
     InitializeCriticalSection(&g_dispatch_lock);
+    InitializeCriticalSection(&g_fair_cs);
+    InitializeConditionVariable(&g_fair_cv);
+#if defined(__SWITCH__)
+    g_fair_dispatch = !(e && *e == '0');
+#else
+    g_fair_dispatch = e && *e == '1';
+#endif
+    if (g_fair_dispatch)
+        fprintf(stderr, "  [KERNEL] dispatch lock handed over in order (RECOMP_FAIR_DISPATCH)\n");
     return TRUE;
 }
 
@@ -237,7 +310,13 @@ static void irql_transition(KIRQL from, KIRQL to)
      * the dispatch lock and wants the guest lock, so a contended raise lets
      * go of it first (a no-op when the caller does not hold it). */
     if (from < DISPATCH_LEVEL && to >= DISPATCH_LEVEL) {
-        if (!TryEnterCriticalSection(&g_dispatch_lock)) {
+        if (g_fair_dispatch) {
+            if (!fair_try()) {
+                int gil = xbox_gil_suspend();
+                fair_enter();
+                xbox_gil_resume(gil);
+            }
+        } else if (!TryEnterCriticalSection(&g_dispatch_lock)) {
             int gil = xbox_gil_suspend();
             EnterCriticalSection(&g_dispatch_lock);
             xbox_gil_resume(gil);
@@ -247,7 +326,10 @@ static void irql_transition(KIRQL from, KIRQL to)
     } else if (from >= DISPATCH_LEVEL && to < DISPATCH_LEVEL) {
         xbox_kernel_busy(-1);
         t_dispatch_held = 0;
-        LeaveCriticalSection(&g_dispatch_lock);
+        if (g_fair_dispatch)
+            fair_leave();
+        else
+            LeaveCriticalSection(&g_dispatch_lock);
     }
 }
 

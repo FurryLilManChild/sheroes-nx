@@ -1,5 +1,13 @@
 # Progress log (newest first)
 
+## 2026-10-28: diagnostic build for the white level geometry
+
+- The frame trace now prints every combiner stage the stage draws enable (the old line showed two of three), each
+  stage's two constant colours, and the final combiner's constants.
+- With `RECOMP_TEXDUMP_DIR` set (run_game.ps1 sets it to `out\texdump`), a traced frame also saves the level-0 bytes of
+  each draw's textures, once per address, so the stage textures can be decoded and checked offline.
+- Nothing visible changes; this build only gathers the data to find why the stage draws white.
+
 ## 2026-10-28 (later): the first PC builds
 
 - Build 1: glslang installed into a folder named `$glslangOut` (Windows PowerShell 5.1 does not expand a variable in

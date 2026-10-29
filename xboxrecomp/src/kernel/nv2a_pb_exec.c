@@ -3428,6 +3428,48 @@ static void raw_batch(void)
                 s_reg[0x1E60 / 4], s_reg[0x0AC0 / 4], s_reg[0x0AC4 / 4],
                 s_reg[0x1E40 / 4], s_reg[0x1E44 / 4], s_reg[0x0260 / 4], s_reg[0x0264 / 4],
                 s_reg[0x0AA0 / 4], s_reg[0x0AA4 / 4], s_reg[0x1E70 / 4], s_reg[0x1E78 / 4]);
+        {   /* sheroes-nx: every combiner stage the control word enables (the
+             * line above shows two), with both constant colours, and the final
+             * combiner's constants; then the level-0 bytes of this draw's
+             * textures to RECOMP_TEXDUMP_DIR, once each (white stage geometry,
+             * 2026-10-28: the stage draws three stages, texture 1 shared). */
+            int nst = (int)(s_reg[0x1E60 / 4] & 0xF), si;
+            if (nst > 8) nst = 8;
+            fprintf(stderr, "[FTRACE]   comb %d stage(s):", nst);
+            for (si = 0; si < nst; si++)
+                fprintf(stderr, " [%d ci %08X co %08X ai %08X ao %08X c0 %08X c1 %08X]", si,
+                        s_reg[(0x0AC0 + 4 * si) / 4], s_reg[(0x1E40 + 4 * si) / 4],
+                        s_reg[(0x0260 + 4 * si) / 4], s_reg[(0x0AA0 + 4 * si) / 4],
+                        s_reg[(0x0A60 + 4 * si) / 4], s_reg[(0x0A80 + 4 * si) / 4]);
+            fprintf(stderr, " | final c0 %08X c1 %08X\n", s_reg[0x1E20 / 4], s_reg[0x1E24 / 4]);
+            {
+                static const char *dir;
+                static int init;
+                static uint32_t done[256];
+                static int ndone;
+                if (!init) { init = 1; dir = getenv("RECOMP_TEXDUMP_DIR"); }
+                for (si = 0; dir && si < 4; si++) {
+                    uint32_t va = rb.tex_va[si], fmt = s_reg[(0x1B04 + 0x40 * si) / 4];
+                    uint32_t color = (fmt >> 8) & 0xFF, w = 1u << ((fmt >> 20) & 0xF), h = 1u << ((fmt >> 24) & 0xF);
+                    uint32_t bytes = color == 0x0C ? w * h / 2 : (color == 0x0E || color == 0x0F) ? w * h :
+                                     color == 0x0B ? w * h : w * h * 4;
+                    int k2, seen = 0;
+                    char path[512];
+                    FILE *tf;
+                    if (!va || !(s_reg[(0x1B0C + 0x40 * si) / 4] & 0x40000000u) || w > 1024 || h > 1024)
+                        continue;
+                    for (k2 = 0; k2 < ndone; k2++) seen |= done[k2] == va;
+                    if (seen || ndone >= 256) continue;
+                    done[ndone++] = va;
+                    snprintf(path, sizeof path, "%s/%08X_f%02X_%ux%u.bin", dir, va, color, w, h);
+                    tf = fopen(path, "wb");
+                    if (tf) {
+                        fwrite((uint8_t *)xbox_GetMemoryOffset() + va, 1, bytes, tf);
+                        fclose(tf);
+                    }
+                }
+            }
+        }
         if (rb.xform == 1) {
             const float *m = s_gpu.composite;
             float a0[4] = {0};

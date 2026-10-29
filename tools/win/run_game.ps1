@@ -27,6 +27,10 @@ if (-not $env:RECOMP_FPS_LOG) { $env:RECOMP_FPS_LOG = '1' }
 $env:RECOMP_FRAME_TRACE = (Join-Path $repo 'out\ftrace.flag')
 # tools\win\dump_threads.ps1 creates this file to dump every thread's call stack.
 $env:RECOMP_THREAD_DUMP = (Join-Path $repo 'out\threads.flag')
+# trace_frame.ps1 also saves the traced draws' textures here (raw bytes, for Claude).
+$texDir = Join-Path $repo 'out\texdump'
+New-Item -ItemType Directory -Force -Path $texDir | Out-Null
+$env:RECOMP_TEXDUMP_DIR = $texDir
 foreach ($kv in $Env) {
     if ($kv -match '^([^=]+)=(.*)$') { Set-Item -Path "env:$($matches[1])" -Value $matches[2]; Write-Host "  test switch: $kv" }
 }

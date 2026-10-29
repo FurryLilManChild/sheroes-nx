@@ -337,6 +337,27 @@ void sub_0029B4E0(void)
     }
 }
 
+/* Diagnostic, stage-scene probe: sub_0001D1D0 is the stage scene's update (class
+ * descriptor at 0x003897A0: init 0x0001A740, update 0x0001D1D0, exit
+ * 0x0001A820), a state machine on [this+8] (17 states, table 0x0001D9A8).
+ * Logs each state change: the stage sits at NOW LOADING for good. */
+extern void sub_0001D1D0_gen(void);
+void sub_0001D1D0(void)
+{
+    static uint32_t last_s = 0xFFFFFFFF, last_c = 0xFFFFFFFF, last_10 = 0xFFFFFFFF;
+    static unsigned n;
+    uint32_t self = ecx;
+    sub_0001D1D0_gen();
+    if (self) {
+        uint32_t st = MEM32(self + 8), c = MEM32(self + 0xC), f10 = MEM32(self + 0x10);
+        if ((st != last_s || c != last_c || f10 != last_10) && n++ < 200)
+            fprintf(stderr, "[SCENE] %08X state %u next %u +10 %u +20 %u +28 %u +250 %u +288 %u ret %u\n",
+                    self, st, c, f10, MEM32(self + 0x20), MEM32(self + 0x28),
+                    MEM32(self + 0x250), MEM32(self + 0x288), eax);
+        last_s = st; last_c = c; last_10 = f10;
+    }
+}
+
 /* ── Manual function overrides ─────────────────────────────── */
 
 /*

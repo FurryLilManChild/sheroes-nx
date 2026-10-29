@@ -337,6 +337,51 @@ void sub_0029B4E0(void)
     }
 }
 
+/* Diagnostic: the screen fader at [0x0055867C] (vtable 0x0038A5D8, built by
+ * sub_00037E70). Stage state 4 (0x0001D543) waits for its mode, +0x28, to
+ * reach 0; the PC run stayed in state 4 for good. Mode 2 fades in, 3 fades
+ * out; the update, vtable+4 = 0x00038320, steps the colour +0x30 toward the
+ * target +0x2C by 5 per channel and sets the mode to 0 when they meet. Logs
+ * the update's calls and every fade start (vtable +0x38 0x00038DC0, +0x3C
+ * 0x00038DD0, +0x48 0x00038DE0, +0x40/+0x50 0x00038E20). */
+extern void sub_00038320_gen(void);
+extern void sub_00038DC0_gen(void);
+extern void sub_00038DD0_gen(void);
+static unsigned s_fade_updates;
+
+static void fade_log(const char *what, uint32_t self)
+{
+    static unsigned n;
+    if (n++ < 60)
+        fprintf(stderr, "[FADE] %s obj %08X mode %d cur %08X target %08X (updates so far %u)\n",
+                what, self, (int)MEM32(self + 0x28), MEM32(self + 0x30), MEM32(self + 0x2C),
+                s_fade_updates);
+}
+
+void sub_00038320(void)
+{
+    uint32_t self = ecx;
+    uint32_t before = MEM32(self + 0x28);
+    sub_00038320_gen();
+    s_fade_updates++;
+    if (s_fade_updates <= 3 || (before && !MEM32(self + 0x28)) || (s_fade_updates % 600) == 0)
+        fade_log(before && !MEM32(self + 0x28) ? "update: fade finished" : "update", self);
+}
+
+void sub_00038DC0(void)
+{
+    uint32_t self = ecx;
+    sub_00038DC0_gen();
+    fade_log("start fade in (mode 2)", self);
+}
+
+void sub_00038DD0(void)
+{
+    uint32_t self = ecx;
+    sub_00038DD0_gen();
+    fade_log("start fade out (mode 3)", self);
+}
+
 /* Diagnostic, stage-scene probe: sub_0001D1D0 is the stage scene's update (class
  * descriptor at 0x003897A0: init 0x0001A740, update 0x0001D1D0, exit
  * 0x0001A820), a state machine on [this+8] (17 states, table 0x0001D9A8).
@@ -355,6 +400,12 @@ void sub_0001D1D0(void)
                     self, st, c, f10, MEM32(self + 0x20), MEM32(self + 0x28),
                     MEM32(self + 0x250), MEM32(self + 0x288), eax);
         last_s = st; last_c = c; last_10 = f10;
+        {   /* the fader, every ~600 calls (about 10 s) */
+            static unsigned k;
+            uint32_t f = MEM32(0x0055867Cu);
+            if (f && (++k % 600) == 0)
+                fade_log("scene state check", f);
+        }
     }
 }
 

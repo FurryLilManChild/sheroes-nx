@@ -58,6 +58,13 @@
   tools/win/dump_threads.ps1 (flag file) prints the guest-lock holder, IRQL holders, the hottest
   RtlEnterCriticalSection callers (counted in the kernel dispatcher) and every thread's host stack. The window's
   close button now ends the program (SDL_QUIT was ignored).
+- Play 6 (thread dump): no deadlock; the main thread renders, CRI's threads idle (the self-suspending one resumed
+  ~36/s). The hot lock is DirectSound's global lock (sub_0033E675). The attract demo stops at the same NOW LOADING
+  (title card), so it is the stage start, not input. The stage scene (class 0x003897A0: init 0x0001A740, update
+  0x0001D1D0, a 17-state machine on [this+8]) goes 2 -> 4 and stays in 4 (PC run, [SCENE] log). State 4
+  (0x0001D543) waits for the screen fader at [0x0055867C] (vtable 0x0038A5D8) to finish: mode +0x28 back to 0.
+  The fader update (vtable+4, 0x00038320) steps colour +0x30 toward target +0x2C by 5 and always converges, so
+  either it is not called or the fade keeps restarting. [FADE] diagnostics log the update and every fade start.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

@@ -1,5 +1,15 @@
 # Progress log (newest first)
 
+## 2026-10-29: fixed-function texgen (the character shine)
+
+- The fixed-function vertex shader now generates texture coordinates as the NV2A does (xemu's vsh-ff.c): per stage
+  SET_TEXGEN_S/T/R/Q (eye linear, object linear, sphere map, normal map, reflection map) with normals taken to eye
+  space by SET_INVERSE_MODEL_VIEW_MATRIX0, then SET_TEXTURE_MATRIX when SET_TEXTURE_MATRIX_ENABLE is on. Register
+  addresses from nv2a_regs.h. Vulkan only (the GL back end leaves u_tg at 0 and keeps the old path).
+- The frame trace prints each enabled stage's texgen modes and texture matrix, so the next trace confirms which
+  modes the character passes use.
+- Not yet seen running: Mark's play test checks the characters.
+
 ## 2026-10-28: textured stage (play test 10)
 
 - The fixed-function fog fix works: Mark's screenshot shows the stage textured (grass, path, stone, water) at a good

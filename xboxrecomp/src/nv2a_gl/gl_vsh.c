@@ -288,6 +288,7 @@ static const char s_vk_prelude[] =
     "    float u_snap_y;\n"
     "    vec2 u_zclip;\n"     /* sheroes-nx: SET_CLIP_MIN/MAX as depth 0..1 */
     "    vec4 u_fogv[5];\n"   /* sheroes-nx: fixed-function fog, see nv2a_gl_vsh_fixed */
+    "    vec4 u_tg[44];\n"    /* sheroes-nx: fixed-function texgen, see nv2a_gl_vsh_fixed */
     "};\n"
     /* Transform constants, 192 per instance: an instanced draw (nv2a_vk.c)
      * repeats one mesh with each instance's own set. NV2A_VK_INSTANCES. */
@@ -492,10 +493,37 @@ const char *nv2a_gl_vsh_fixed(void)
 {
     /* Vulkan: u_xform is a member of the prelude's uniform block. */
     static const char decl[] = "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
-                               "uniform vec4 u_fogv[5];\n";
+                               "uniform vec4 u_fogv[5];\n"
+                               "uniform vec4 u_tg[44];\n";
     static const char body[] =
         "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
         "uniform vec4 u_fogv[5];\n"
+        "uniform vec4 u_tg[44];\n"
+        /* sheroes-nx: texture coordinate generation and the texture matrices
+         * (xemu's vsh-ff.c), per stage i from u_tg[4 + 10 i]: [0] SET_TEXGEN
+         * S/T/R/Q modes, [1].x SET_TEXTURE_MATRIX_ENABLE, [2..5]
+         * SET_TEXTURE_MATRIX, [6..9] SET_TEXGEN_PLANE S/T/R/Q. u_tg[0..2]:
+         * SET_INVERSE_MODEL_VIEW_MATRIX0 (normals to eye space). Sonic
+         * Heroes' character shine passes are sphere / reflection mapped; with
+         * the model's own coordinates the highlight landed as white patches. */
+        "vec4 nv2a_tc(int i, vec4 t, vec4 p, vec3 e, vec3 n) {\n"
+        "    int b = 4 + 10 * i;\n"
+        "    vec3 u = normalize(e);\n"
+        "    vec3 r = reflect(u, n);\n"
+        "    float im = 1.0 / (2.0 * length(r + vec3(0.0, 0.0, 1.0)));\n"
+        "    vec4 o = t;\n"
+        "    for (int j = 0; j < 4; j++) {\n"
+        "        int m = int(u_tg[b][j] + 0.5);\n"
+        "        if (m == 0x2400) o[j] = dot(u_tg[b + 6 + j], vec4(e, 1.0));\n"
+        "        else if (m == 0x2401) o[j] = dot(u_tg[b + 6 + j], p);\n"
+        "        else if (m == 0x2402) o[j] = j < 2 ? r[j] * im + 0.5 : t[j];\n"
+        "        else if (m == 0x8511) o[j] = j < 3 ? n[j] : t[j];\n"
+        "        else if (m == 0x8512) o[j] = j < 3 ? r[j] : t[j];\n"
+        "    }\n"
+        "    if (u_tg[b + 1].x > 0.5)\n"
+        "        o = vec4(dot(o, u_tg[b + 2]), dot(o, u_tg[b + 3]), dot(o, u_tg[b + 4]), dot(o, u_tg[b + 5]));\n"
+        "    return o;\n"
+        "}\n"
         "void main() {\n"
         "    if (u_xform == 1) {\n"
         "        vec4 clip = vec4(dot(u_m[0], v0), dot(u_m[1], v0),\n"
@@ -519,6 +547,10 @@ const char *nv2a_gl_vsh_fixed(void)
          * the back end fills these (Vulkan; the GL back end leaves 0). */
         "    if (u_xform == 1 && u_fogv[4].y > 0.5) {\n"
         "        vec3 e = vec3(dot(u_fogv[0], v0), dot(u_fogv[1], v0), dot(u_fogv[2], v0));\n"
+        "        vec3 n = vec3(dot(v2.xyz, u_tg[0].xyz), dot(v2.xyz, u_tg[1].xyz), dot(v2.xyz, u_tg[2].xyz));\n"
+        "        n = dot(n, n) > 1e-12 ? normalize(n) : vec3(0.0, 0.0, -1.0);\n"
+        "        vT0 = nv2a_tc(0, v9, v0, e, n); vT1 = nv2a_tc(1, v10, v0, e, n);\n"
+        "        vT2 = nv2a_tc(2, v11, v0, e, n); vT3 = nv2a_tc(3, v12, v0, e, n);\n"
         "        int g = int(u_fogv[4].x + 0.5);\n"
         "        if (g == 0) vFog = v4.a;\n"
         "        else if (g == 1) vFog = length(e);\n"

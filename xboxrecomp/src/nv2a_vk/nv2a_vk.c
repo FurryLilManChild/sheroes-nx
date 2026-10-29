@@ -3107,6 +3107,7 @@ typedef struct {
     float zclip[2];            /* sheroes-nx: SET_CLIP_MIN/MAX as depth 0..1 */
     float pad0[2];
     float fogv[5][4];          /* sheroes-nx: fixed-function fog (gl_vsh.c) */
+    float tg[44][4];           /* sheroes-nx: fixed-function texgen (gl_vsh.c) */
 } VsBlock;
 
 typedef struct {
@@ -3468,6 +3469,24 @@ static void vk_draw_raw(const Nv2aRawBatch *b)
             vb->fogv[4][1] = 1.0f;
             vb->fogv[4][2] = vb->fogv[4][3] = 0.0f;
             vb->pad0[0] = vb->pad0[1] = 0.0f;
+            /* Texgen: SET_INVERSE_MODEL_VIEW_MATRIX0's first three columns,
+             * then per stage SET_TEXGEN_S..Q (0x3C0 + 0x10 i),
+             * SET_TEXTURE_MATRIX_ENABLE (0x420 + 4 i), SET_TEXTURE_MATRIX
+             * (0x6C0 + 0x40 i) and SET_TEXGEN_PLANE_S..Q (0x840 + 0x40 i). */
+            memset(vb->tg, 0, sizeof vb->tg);
+            for (k = 0; k < 12; k++)
+                memcpy(&vb->tg[k / 4][k % 4], &r[0x580 / 4 + k], 4);
+            for (k = 0; k < 4; k++) {
+                float (*t)[4] = &vb->tg[4 + 10 * k];
+                int j;
+                for (j = 0; j < 4; j++)
+                    t[0][j] = (float)r[(0x3C0 + 0x10 * k) / 4 + j];
+                t[1][0] = r[(0x420 + 4 * k) / 4] ? 1.0f : 0.0f;
+                for (j = 0; j < 16; j++) {
+                    memcpy(&t[2 + j / 4][j % 4], &r[(0x6C0 + 0x40 * k) / 4 + j], 4);
+                    memcpy(&t[6 + j / 4][j % 4], &r[(0x840 + 0x40 * k) / 4 + j], 4);
+                }
+            }
         }
         ub[0].buffer = s_f->ring;
         ub[0].offset = vat;

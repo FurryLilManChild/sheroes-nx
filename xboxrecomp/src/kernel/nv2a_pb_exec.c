@@ -3446,6 +3446,19 @@ static void raw_batch(void)
                     s_reg[0x02A4 / 4], s_reg[0x029C / 4], s_reg[0x02A0 / 4], s_reg[0x02A8 / 4],
                     reg_f(0x09C0), reg_f(0x09C4), reg_f(0x09D0), reg_f(0x09D4), reg_f(0x09D8), reg_f(0x09DC),
                     reg_f(0x04A0), reg_f(0x04A4), reg_f(0x04A8), reg_f(0x04AC));
+            {   /* sheroes-nx: texgen and texture matrices per enabled stage */
+                int ts;
+                for (ts = 0; ts < 4; ts++) {
+                    uint32_t b4 = (0x3C0 + 0x10 * ts) / 4;
+                    if (!(s_reg[(0x1B0C + 0x40 * ts) / 4] & 0x40000000u))
+                        continue;
+                    fprintf(stderr, "[FTRACE]   tex%d gen %X %X %X %X tmat %u m %g %g %g %g / %g %g %g %g\n", ts,
+                            s_reg[b4], s_reg[b4 + 1], s_reg[b4 + 2], s_reg[b4 + 3], s_reg[(0x420 + 4 * ts) / 4],
+                            reg_f(0x6C0 + 0x40 * ts), reg_f(0x6C4 + 0x40 * ts), reg_f(0x6C8 + 0x40 * ts),
+                            reg_f(0x6CC + 0x40 * ts), reg_f(0x6D0 + 0x40 * ts), reg_f(0x6D4 + 0x40 * ts),
+                            reg_f(0x6D8 + 0x40 * ts), reg_f(0x6DC + 0x40 * ts));
+                }
+            }
             {
                 static const char *dir;
                 static int init;

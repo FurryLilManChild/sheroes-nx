@@ -4,8 +4,8 @@
 
 - Play test 12 (zoomed in): Tails' face in the stage is now right; past the old freeze the stage plays on. Still
   wrong: dark streaks off Sonic's and Knuckles' heads (stage) and off Knuckles, Sonic, Shadow, Charmy, Big's belt and
-  Vector (team select); Espio and part of Omega scrambled; Sonic's and Knuckles' faces grey with no eyes; team
-  select models still flat.
+  Vector (team select); Espio and part of Omega scrambled. (I also reported grey faces and flat shading from the
+  screenshots; Mark checked and the faces and shading are fine. Misread on my side, struck.)
 - The trace: SET_SKIN_MODE is 0 on every draw, so the fixed-function blending added earlier never runs. The
   characters are vertex-program draws (program at slot 12, five variants of 18 to 29 instructions): two-bone
   skinning from a palette of 3x4 matrices at c[8 + a0], a0 from attribute 2 (S32K shorts), weights from attribute
@@ -16,10 +16,9 @@
 
 ## 2026-10-29: correction, fixed-function lighting, vertex program dump
 
-- Correction to the entry below: the characters are NOT fixed. Looking properly at Mark's play test 11 screenshots:
-  every character is flat (no shading); Sonic's and Knuckles' faces are grey or white with no eyes; Tails' face is a
-  flat mask; streaks come off several models; Espio and Omega are partly scrambled. The shine fix only removed the
-  white highlight patches.
+- Correction to the entry below: the characters are NOT fixed. Mark's play test 11 screenshots still show Tails'
+  odd face, streaks off several models, and Espio and Omega partly scrambled. (My notes on grey faces and flat
+  shading were a misread of the screenshots; Mark says the faces and shading look fine.)
 - Flat shading: the Vulkan fixed-function shader never lit anything; it passed the vertex colour stream through
   (lit_color existed only on the CPU, for the trace and the software rasteriser). The shader now does the same
   lighting on the GPU from the light registers (scene ambient + per light atten * (ambient + diffuse * N.L), colour

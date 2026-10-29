@@ -3479,6 +3479,43 @@ static void raw_batch(void)
                     sx = tx[nok * 9 / 10] - tx[nok / 10] + 2.0f; sy = ty[nok * 9 / 10] - ty[nok / 10] + 2.0f;
                     fprintf(stderr, "[FTRACE]   vcheck %u verts, median %.1f %.1f spread %.1f %.1f, uv %g..%g %g..%g\n",
                             nok, mx, my, sx, sy, u0, u1, w0, w1);
+                    {   /* the three longest triangles of the draw's topology
+                         * (5 list, 6 strip, 7 fan), degenerate ones skipped */
+                        uint32_t best[3] = {0, 0, 0}, t, nt;
+                        float bl[3] = {0, 0, 0};
+                        int prim = (int)rb.prim;
+                        nt = prim == 5 ? nv / 3 : nv >= 3 ? nv - 2 : 0;
+                        for (t = 0; t < nt; t++) {
+                            uint32_t i0, i1, i2, k3;
+                            const VpOut *p0, *p1, *p2;
+                            float e, m3;
+                            if (prim == 5) { i0 = s_gpu.idx[3 * t]; i1 = s_gpu.idx[3 * t + 1]; i2 = s_gpu.idx[3 * t + 2]; }
+                            else if (prim == 7) { i0 = s_gpu.idx[0]; i1 = s_gpu.idx[t + 1]; i2 = s_gpu.idx[t + 2]; }
+                            else if (prim == 6) { i0 = s_gpu.idx[t]; i1 = s_gpu.idx[t + 1]; i2 = s_gpu.idx[t + 2]; }
+                            else break;
+                            if (i0 == i1 || i1 == i2 || i0 == i2) continue;
+                            p0 = vp_vertex(i0); p1 = vp_vertex(i1); p2 = vp_vertex(i2);
+                            m3 = fabsf(p0->pos[0] - p1->pos[0]) + fabsf(p0->pos[1] - p1->pos[1]);
+                            e = fabsf(p1->pos[0] - p2->pos[0]) + fabsf(p1->pos[1] - p2->pos[1]);
+                            if (e > m3) m3 = e;
+                            e = fabsf(p0->pos[0] - p2->pos[0]) + fabsf(p0->pos[1] - p2->pos[1]);
+                            if (e > m3) m3 = e;
+                            for (k3 = 0; k3 < 3; k3++)
+                                if (m3 > bl[k3]) {
+                                    uint32_t k4;
+                                    for (k4 = 2; k4 > k3; k4--) { bl[k4] = bl[k4 - 1]; best[k4] = best[k4 - 1]; }
+                                    bl[k3] = m3; best[k3] = t;
+                                    break;
+                                }
+                        }
+                        fprintf(stderr, "[FTRACE]   vtri prim %d tris %u longest", prim, nt);
+                        for (t = 0; t < 3; t++)
+                            fprintf(stderr, " [t%u %.0f: %u %u %u]", best[t], bl[t],
+                                    s_gpu.idx[prim == 5 ? 3 * best[t] : prim == 7 ? 0 : best[t]],
+                                    s_gpu.idx[prim == 5 ? 3 * best[t] + 1 : best[t] + 1],
+                                    s_gpu.idx[prim == 5 ? 3 * best[t] + 2 : best[t] + 2]);
+                        fprintf(stderr, "\n");
+                    }
                     for (q = 0; q < nv && nout < 4; q++) {
                         const VpOut *o = vp_vertex(s_gpu.idx[q]);
                         float a0v[4], a1v[4], a2v[4], a5v[4];

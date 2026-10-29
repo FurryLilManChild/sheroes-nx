@@ -1,5 +1,14 @@
 # Progress log (newest first)
 
+## 2026-10-29: play test 13, streak diagnostics
+
+- RECOMP_VK_INSTANCE=0 (no instanced draws): the streaks and Espio are unchanged, so instancing is not the cause.
+- The per-vertex check found no outlying vertex in any character draw: the CPU interpreter puts every vertex near
+  the rest of its mesh. So either the streaks are long triangles between vertices that are each in a plausible place
+  (strip joins), or the GPU path computes something the CPU interpreter does not (the direct attribute formats).
+- Next: the trace lists each vertex-program draw's three longest triangles by topology; A/B with RECOMP_GL_DIRECT=0
+  (every attribute converted on the CPU, as the interpreter reads them).
+
 ## 2026-10-29: play test 12, the streaks are not fixed-function skinning
 
 - Play test 12 (zoomed in): Tails' face in the stage is now right; past the old freeze the stage plays on. Still

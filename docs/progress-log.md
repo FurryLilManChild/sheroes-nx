@@ -71,6 +71,9 @@
   stale and the fade never ended: every stage waited in state 4 at NOW LOADING. lifter.py: LAHF from g_fp_cmp for
   fcomi/fcomip/fucomi/fucomip/fcompi/fucompi. 34 generated files changed. build_pc.ps1 re-lifts when the
   lifter's .py files change.
+- Play 8 (Mark): the stage title card shows in full for the first time, the stage starts (scene 4 -> 5), the
+  characters respond to every button, a death restarts the stage (5 -> 8 -> 4 -> 5), the timer runs. No crash, no
+  failed calls, ~53 fps with -Shots. Next for playability: the stage geometry draws white.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

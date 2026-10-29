@@ -1148,10 +1148,21 @@ static void spin_ack_flush(void)
     }
 }
 
+/* sheroes-nx: set by a wake, cleared by the sleepers when they wake. A poll
+ * loop calls recomp_spin_wake every 16 turns; with a wake already on its way
+ * the next one only took the lock again. On the Switch that was 10-15% of
+ * Sonic Heroes' main thread in a stage (svcArbitrateLock and
+ * svcSignalProcessWideKey under recomp_spin_wake, D3D's pushbuffer wait
+ * sub_0032FC10) and 28% of the flag thread fighting it for the lock
+ * (profile of Switch test 7, 2026-10-29). */
+static volatile int s_hw_wake_pending;
+
 void recomp_spin_wake(void)
 {
     spin_ack_flush();
     if (!__atomic_load_n(&s_hw_sleepers, __ATOMIC_RELAXED))
+        return;
+    if (__atomic_exchange_n(&s_hw_wake_pending, 1, __ATOMIC_ACQ_REL))
         return;
     pthread_mutex_lock(&s_hw_lock);
     s_hw_wakes++;
@@ -1189,6 +1200,7 @@ static void nv2a_thread_pause(int busy)
             if (pthread_cond_timedwait(&s_hw_cond, &s_hw_lock, &ts) != 0)
                 break;
         __atomic_sub_fetch(&s_hw_sleepers, 1, __ATOMIC_RELAXED);
+        __atomic_store_n(&s_hw_wake_pending, 0, __ATOMIC_RELEASE);
         pthread_mutex_unlock(&s_hw_lock);
     }
 #endif

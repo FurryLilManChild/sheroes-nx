@@ -1,5 +1,21 @@
 # Progress log (newest first)
 
+## 2026-10-29: Switch tests 6-7, LTO A/B and the first Switch profile
+
+- LTO A/B (Mark): neither felt much better. Stage 40-47 frames a second either way, game thread 80-95% of a core;
+  vblank 55 Hz in the normal build's stage, 39 in the LTO run. LTO set aside.
+- Mark asked whether a sound fix might matter as it did in CoD-nx (DirectSound reset the DSP and stalled 10 ms per
+  frame when its heartbeat word did not read 0xCCCCCC). Not here: Sonic Heroes' DSOUND 5659 has no such check (no
+  `cmp dword [eax], 0xCCCCCC` in the XBE). The APU frame thread is 86% idle; the audio lags because the game
+  thread feeds it late.
+- Profile (RECOMP_NX_PROFILE=1 from 60 s, normal build 6ab9cd7, tools/prof_report.py), game main thread: about 45%
+  in host sync primitives. D3D's pushbuffer-space wait sub_0032FC10 (< sub_00338780 < sub_002AD860) and its spin
+  hint's recomp_spin_wake / recomp_spin_yield about 16%; guest critical sections (RtlEnter/Leave, the host mutex
+  and the shadow rwlock) about 8%; KeWaitForSingleObject waits about 5%; guest-lock handovers about 4%; file
+  opens' path lookups (stat, readdir) about 2%. The executor thread is 52% idle, and the flag thread spends 28% in
+  svcArbitrateLock on the wake lock.
+- First change: recomp_spin_wake skips the lock and the broadcast while a wake is already pending.
+
 ## 2026-10-29: Switch test 5, vblank 44 Hz
 
 - With the fair dispatch lock the stage vblank went from 0.5-7 Hz to 42-46 Hz, but menus fell from 57 to 44-45

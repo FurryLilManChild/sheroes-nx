@@ -1,5 +1,19 @@
 # Progress log (newest first)
 
+## 2026-10-29: correction, fixed-function lighting, vertex program dump
+
+- Correction to the entry below: the characters are NOT fixed. Looking properly at Mark's play test 11 screenshots:
+  every character is flat (no shading); Sonic's and Knuckles' faces are grey or white with no eyes; Tails' face is a
+  flat mask; streaks come off several models; Espio and Omega are partly scrambled. The shine fix only removed the
+  white highlight patches.
+- Flat shading: the Vulkan fixed-function shader never lit anything; it passed the vertex colour stream through
+  (lit_color existed only on the CPU, for the trace and the software rasteriser). The shader now does the same
+  lighting on the GPU from the light registers (scene ambient + per light atten * (ambient + diffuse * N.L), colour
+  material), on the blended eye position and normal. RECOMP_VK_LIGHT=0 turns it off.
+- Faces and eyes: the head draws (eye texture 80CB5F00, three combiner stages) are vertex-program draws (xform 2,
+  program start 12), not fixed-function. The trace now dumps each vertex program of the traced frame (raw
+  instructions, non-zero constants, attribute formats) and the lighting registers, to translate offline.
+
 ## 2026-10-29: play test 11 (shine fixed), the stage freeze, vertex blending
 
 - Texgen works: the characters and the team select models look right. The trace shows the shine passes use

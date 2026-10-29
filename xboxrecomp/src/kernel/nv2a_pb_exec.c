@@ -1135,6 +1135,8 @@ int nv2a_backend_decode_texture(const Nv2aTexture *tex, uint32_t *argb_out)
 }
 
 static int s_ftrace_on;                /* RECOMP_FRAME_TRACE armed for this frame */
+static uint32_t s_ftrace_vp[32][2];     /* sheroes-nx: programs dumped this traced frame */
+static int s_ftrace_vp_n;
 
 static void clear_surface(uint32_t param)
 {
@@ -3446,6 +3448,34 @@ static void raw_batch(void)
                     s_reg[0x02A4 / 4], s_reg[0x029C / 4], s_reg[0x02A0 / 4], s_reg[0x02A8 / 4],
                     reg_f(0x09C0), reg_f(0x09C4), reg_f(0x09D0), reg_f(0x09D4), reg_f(0x09D8), reg_f(0x09DC),
                     reg_f(0x04A0), reg_f(0x04A4), reg_f(0x04A8), reg_f(0x04AC));
+            if (rb.xform == 2) {   /* sheroes-nx: each vertex program once per traced frame */
+                int q, seen = 0;
+                for (q = 0; q < s_ftrace_vp_n; q++)
+                    seen |= s_ftrace_vp[q][0] == s_vp.prog_start && s_ftrace_vp[q][1] == s_vp.prog_gen;
+                if (!seen && s_ftrace_vp_n < 32) {
+                    uint32_t pc;
+                    s_ftrace_vp[s_ftrace_vp_n][0] = s_vp.prog_start;
+                    s_ftrace_vp[s_ftrace_vp_n++][1] = s_vp.prog_gen;
+                    fprintf(stderr, "[FTRACE]   vprog start %u gen %u\n", s_vp.prog_start, s_vp.prog_gen);
+                    for (pc = s_vp.prog_start; pc < VP_SLOTS; pc++) {
+                        fprintf(stderr, "[FTRACE]   vpi %u %08X %08X %08X %08X\n", pc, s_vp.prog[pc][0],
+                                s_vp.prog[pc][1], s_vp.prog[pc][2], s_vp.prog[pc][3]);
+                        if (s_vp.prog[pc][3] & 1)
+                            break;
+                    }
+                    for (pc = 0; pc < VP_CONSTS; pc++)
+                        if (s_vp.c[pc][0] != 0.0f || s_vp.c[pc][1] != 0.0f || s_vp.c[pc][2] != 0.0f || s_vp.c[pc][3] != 0.0f)
+                            fprintf(stderr, "[FTRACE]   vpc %u %g %g %g %g\n", pc, s_vp.c[pc][0], s_vp.c[pc][1],
+                                    s_vp.c[pc][2], s_vp.c[pc][3]);
+                    fprintf(stderr, "[FTRACE]   vattr");
+                    for (pc = 0; pc < 16; pc++)
+                        fprintf(stderr, " %u:t%u s%u", pc, s_gpu.attr[pc].type, s_gpu.attr[pc].size);
+                    fprintf(stderr, "\n");
+                }
+            }
+            fprintf(stderr, "[FTRACE]   light en %X mask %X colmat %X amb %g %g %g matalpha %g\n",
+                    s_reg[0x0314 / 4], s_reg[0x03BC / 4], s_reg[0x0298 / 4], reg_f(0x0A10), reg_f(0x0A14),
+                    reg_f(0x0A18), reg_f(0x03B4));
             fprintf(stderr, "[FTRACE]   skin %X mv0r3 %g %g %g %g imv0 %g %g %g %g / %g %g %g %g / %g %g %g %g / %g %g %g %g"
                     " mv0 %g %g %g %g / %g %g %g %g / %g %g %g %g\n", s_reg[0x0328 / 4],
                     reg_f(0x04B0), reg_f(0x04B4), reg_f(0x04B8), reg_f(0x04BC),
@@ -4831,6 +4861,7 @@ void nv2a_pb_exec_method(uint32_t subch, uint32_t method, uint32_t param)
             }
             if (flag && remove(flag) == 0) {
                 s_ftrace_on = 1;
+                s_ftrace_vp_n = 0;
                 fprintf(stderr, "[FTRACE] frame after flip %u\n", s_gpu.flips);
             }
         }

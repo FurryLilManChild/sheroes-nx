@@ -290,6 +290,7 @@ static const char s_vk_prelude[] =
     "    vec4 u_fogv[5];\n"   /* sheroes-nx: fixed-function fog, see nv2a_gl_vsh_fixed */
     "    vec4 u_tg[44];\n"    /* sheroes-nx: fixed-function texgen, see nv2a_gl_vsh_fixed */
     "    vec4 u_sk[24];\n"    /* sheroes-nx: fixed-function skinning, see nv2a_gl_vsh_fixed */
+    "    vec4 u_lt[42];\n"    /* sheroes-nx: fixed-function lighting, see nv2a_gl_vsh_fixed */
     "};\n"
     /* Transform constants, 192 per instance: an instanced draw (nv2a_vk.c)
      * repeats one mesh with each instance's own set. NV2A_VK_INSTANCES. */
@@ -496,12 +497,50 @@ const char *nv2a_gl_vsh_fixed(void)
     static const char decl[] = "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
                                "uniform vec4 u_fogv[5];\n"
                                "uniform vec4 u_tg[44];\n"
-                               "uniform vec4 u_sk[24];\n";
+                               "uniform vec4 u_sk[24];\n"
+                               "uniform vec4 u_lt[42];\n";
     static const char body[] =
         "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
         "uniform vec4 u_fogv[5];\n"
         "uniform vec4 u_tg[44];\n"
         "uniform vec4 u_sk[24];\n"
+        "uniform vec4 u_lt[42];\n"
+        /* sheroes-nx: fixed-function vertex lighting, the executor's
+         * lit_color (nv2a_pb_exec.c) on the GPU: colour = scene ambient +
+         * sum over lights of atten * (ambient + diffuse * max(0, N.L)), with
+         * SET_COLOR_MATERIAL taking ambient / diffuse from the vertex colour.
+         * Before this the shader passed the vertex colour stream straight
+         * through, so every lit mesh (Sonic Heroes' characters) drew flat.
+         * Per light i, u_lt[5 i]: ambient rgb, w kind (1 infinite, 2 local,
+         * 3 spot); [+1] diffuse rgb, w range; [+2] infinite direction;
+         * [+3] local position; [+4] attenuation 0..2. [40] scene ambient rgb,
+         * w SET_MATERIAL_ALPHA; [41] x SET_LIGHTING_ENABLE, y
+         * SET_COLOR_MATERIAL. */
+        "vec4 nv2a_light(vec3 e, vec3 n, vec4 vc) {\n"
+        "    int cm = int(u_lt[41].y + 0.5);\n"
+        "    bool amb_v = ((cm >> 2) & 3) == 1, dif_v = ((cm >> 4) & 3) == 1;\n"
+        "    vec3 c = u_lt[40].rgb;\n"
+        "    for (int i = 0; i < 8; i++) {\n"
+        "        int b = 5 * i, kind = int(u_lt[b].w + 0.5);\n"
+        "        if (kind == 0) continue;\n"
+        "        vec3 l; float att = 1.0;\n"
+        "        if (kind == 1) l = u_lt[b + 2].xyz;\n"
+        "        else {\n"
+        "            l = u_lt[b + 3].xyz - e;\n"
+        "            float d = length(l);\n"
+        "            if (u_lt[b + 1].w > 0.0 && d > u_lt[b + 1].w) continue;\n"
+        "            if (d > 1e-8) l /= d;\n"
+        "            float a = u_lt[b + 4].x + u_lt[b + 4].y * d + u_lt[b + 4].z * d * d;\n"
+        "            att = a > 1e-8 ? 1.0 / a : 1.0;\n"
+        "        }\n"
+        "        float ndl = max(dot(n, l), 0.0);\n"
+        "        vec3 am = u_lt[b].rgb, di = u_lt[b + 1].rgb;\n"
+        "        if (amb_v) am *= vc.rgb;\n"
+        "        if (dif_v) di *= vc.rgb;\n"
+        "        c += att * (am + di * ndl);\n"
+        "    }\n"
+        "    return clamp(vec4(c, dif_v ? vc.a : u_lt[40].w), 0.0, 1.0);\n"
+        "}\n"
         /* sheroes-nx: texture coordinate generation and the texture matrices
          * (xemu's vsh-ff.c), per stage i from u_tg[4 + 10 i]: [0] SET_TEXGEN
          * S/T/R/Q modes, [1].x SET_TEXTURE_MATRIX_ENABLE, [2..5]
@@ -600,6 +639,7 @@ const char *nv2a_gl_vsh_fixed(void)
         "    if (u_xform == 1 && u_fogv[4].y > 0.5) {\n"
         "        vec3 e = sk_e, n = sk_n;\n"
         "        n = dot(n, n) > 1e-12 ? normalize(n) : vec3(0.0, 0.0, -1.0);\n"
+        "        if (u_lt[41].x > 0.5) vD0 = nv2a_light(e, n, clamp(v3, 0.0, 1.0));\n"
         "        vT0 = nv2a_tc(0, v9, v0, e, n); vT1 = nv2a_tc(1, v10, v0, e, n);\n"
         "        vT2 = nv2a_tc(2, v11, v0, e, n); vT3 = nv2a_tc(3, v12, v0, e, n);\n"
         "        int g = int(u_fogv[4].x + 0.5);\n"

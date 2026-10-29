@@ -3109,6 +3109,7 @@ typedef struct {
     float fogv[5][4];          /* sheroes-nx: fixed-function fog (gl_vsh.c) */
     float tg[44][4];           /* sheroes-nx: fixed-function texgen (gl_vsh.c) */
     float sk[24][4];           /* sheroes-nx: fixed-function skinning (gl_vsh.c) */
+    float lt[42][4];           /* sheroes-nx: fixed-function lighting (gl_vsh.c) */
 } VsBlock;
 
 typedef struct {
@@ -3491,6 +3492,38 @@ static void vk_draw_raw(const Nv2aRawBatch *b)
                 static int skin = -1;
                 if (skin < 0) { const char *e = getenv("RECOMP_VK_SKIN"); skin = !(e && *e == '0'); }
                 vb->sk[22][0] = skin ? (float)(r[0x328 / 4] & 7) : 0.0f;
+            }
+            /* Lighting: per light 0x1000 + 0x80 i (the offsets lit_color
+             * reads), SET_LIGHT_ENABLE_MASK 0x3BC, SCENE_AMBIENT 0xA10,
+             * MATERIAL_ALPHA 0x3B4, LIGHTING_ENABLE 0x314, COLOR_MATERIAL
+             * 0x298. RECOMP_VK_LIGHT=0: the old raw vertex colour. */
+            memset(vb->lt, 0, sizeof vb->lt);
+            {
+                static int light = -1;
+                if (light < 0) { const char *e = getenv("RECOMP_VK_LIGHT"); light = !(e && *e == '0'); }
+                if (light && r[0x314 / 4]) {
+                    uint32_t mask = r[0x3BC / 4];
+                    for (k = 0; k < 8; k++) {
+                        uint32_t lb = (0x1000 + 0x80 * k) / 4, kind = (mask >> (2 * k)) & 3;
+                        float (*L)[4] = &vb->lt[5 * k];
+                        int j;
+                        if (!kind) continue;
+                        for (j = 0; j < 3; j++) {
+                            memcpy(&L[0][j], &r[lb + j], 4);             /* ambient  +0x00 */
+                            memcpy(&L[1][j], &r[lb + 3 + j], 4);         /* diffuse  +0x0C */
+                            memcpy(&L[2][j], &r[lb + 0x34 / 4 + j], 4);  /* inf dir  +0x34 */
+                            memcpy(&L[3][j], &r[lb + 0x5C / 4 + j], 4);  /* position +0x5C */
+                            memcpy(&L[4][j], &r[lb + 0x68 / 4 + j], 4);  /* atten    +0x68 */
+                        }
+                        L[0][3] = (float)kind;
+                        memcpy(&L[1][3], &r[lb + 0x24 / 4], 4);          /* range    +0x24 */
+                    }
+                    for (k = 0; k < 3; k++)
+                        memcpy(&vb->lt[40][k], &r[0xA10 / 4 + k], 4);
+                    memcpy(&vb->lt[40][3], &r[0x3B4 / 4], 4);
+                    vb->lt[41][0] = 1.0f;
+                    vb->lt[41][1] = (float)(r[0x298 / 4] & 0xFFFF);
+                }
             }
             for (k = 0; k < 4; k++) {
                 float (*t)[4] = &vb->tg[4 + 10 * k];

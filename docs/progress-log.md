@@ -65,6 +65,12 @@
   (0x0001D543) waits for the screen fader at [0x0055867C] (vtable 0x0038A5D8) to finish: mode +0x28 back to 0.
   The fader update (vtable+4, 0x00038320) steps colour +0x30 toward target +0x2C by 5 and always converges, so
   either it is not called or the fade keeps restarting. [FADE] diagnostics log the update and every fade start.
+- Play 7: the base fader's update never ran, but the stage's fader is the subclass (vtable 0x0038A650) whose update
+  0x00038BB0 eases a float toward a target and ends the fade on `fucomip; lahf; test ah, 0x44; jp`. The lifter
+  emitted LAHF after the x87 FCOMI family as a comment (its generic path has no SF expression for them), so AH was
+  stale and the fade never ended: every stage waited in state 4 at NOW LOADING. lifter.py: LAHF from g_fp_cmp for
+  fcomi/fcomip/fucomi/fucomip/fcompi/fucompi. 34 generated files changed. build_pc.ps1 re-lifts when the
+  lifter's .py files change.
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

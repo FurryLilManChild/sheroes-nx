@@ -525,6 +525,16 @@ def _lahf_value(flag_setter, flag_ops):
         un = "(_fca != _fca || _fcb != _fcb)"
         return (f"(uint8_t)(0x02 | ((_fca == _fcb || {un}) ? 0x40 : 0)"
                 f" | ({un} ? 0x04 : 0) | ((_fca < _fcb || {un}) ? 0x01 : 0))")
+    if flag_setter in ("fcompi", "fcomip", "fucomi", "fucompi", "fucomip", "fcomi"):
+        # sheroes-nx: x87 FCOMI family, from g_fp_cmp (-1 less, 0 equal, 1
+        # greater, 2 unordered): ZF, PF, CF as for the SSE compares, SF
+        # cleared. The generic path below has no SF expression for these, so
+        # LAHF lifted to a comment and `fucomip; lahf; test ah, 0x44; jp`
+        # read a stale AH: Sonic Heroes' stage fader (0x00038BB0) never saw
+        # its fade finish and every stage stayed at NOW LOADING (2026-10-28).
+        return ("(uint8_t)(0x02 | ((g_fp_cmp == 0 || g_fp_cmp == 2) ? 0x40 : 0)"
+                " | ((g_fp_cmp == 2) ? 0x04 : 0)"
+                " | ((g_fp_cmp < 0 || g_fp_cmp == 2) ? 0x01 : 0))")
     bits = []
     for jcc, bit in (("js", 0x80), ("je", 0x40), ("jp", 0x04), ("jb", 0x01)):
         cond = _make_condition(jcc, flag_setter, flag_ops)

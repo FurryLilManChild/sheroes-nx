@@ -119,7 +119,9 @@ $stampLift = Join-Path $gen '.stamp_lift'
 $full = $Regen -or -not (Test-Path $stampFull) -or ((Get-Item $seeds).LastWriteTime -gt (Get-Item $stampFull).LastWriteTime)
 $tmplTypes = Join-Path $tk 'templates\runtime\recomp_types.h'
 $lift = $full -or -not (Test-Path $stampLift) -or ((Get-Item $manual).LastWriteTime -gt (Get-Item $stampLift).LastWriteTime) -or
-    ((Get-Item $tmplTypes).LastWriteTime -gt (Get-Item $stampLift).LastWriteTime)
+    ((Get-Item $tmplTypes).LastWriteTime -gt (Get-Item $stampLift).LastWriteTime) -or
+    [bool](Get-ChildItem (Join-Path $tk 'tools\recomp') -Filter '*.py' |
+        Where-Object { $_.LastWriteTime -gt (Get-Item $stampLift).LastWriteTime })
 
 if ($lift) {
     $what = if ($full) { 'Translating the game code (first time or new seeds: a few minutes)' } else { 'Re-lifting the game code (overrides changed)' }

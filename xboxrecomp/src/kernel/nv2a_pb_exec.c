@@ -1135,6 +1135,11 @@ int nv2a_backend_decode_texture(const Nv2aTexture *tex, uint32_t *argb_out)
 }
 
 static int s_ftrace_on;                /* RECOMP_FRAME_TRACE armed for this frame */
+static int ftrace_cmpf(const void *a, const void *b)
+{
+    float x = *(const float *)a, y = *(const float *)b;
+    return x < y ? -1 : x > y;
+}
 static uint32_t s_ftrace_vp[32][2];     /* sheroes-nx: programs dumped this traced frame */
 static int s_ftrace_vp_n;
 
@@ -3448,6 +3453,48 @@ static void raw_batch(void)
                     s_reg[0x02A4 / 4], s_reg[0x029C / 4], s_reg[0x02A0 / 4], s_reg[0x02A8 / 4],
                     reg_f(0x09C0), reg_f(0x09C4), reg_f(0x09D0), reg_f(0x09D4), reg_f(0x09D8), reg_f(0x09DC),
                     reg_f(0x04A0), reg_f(0x04A4), reg_f(0x04A8), reg_f(0x04AC));
+            if (rb.xform == 2 && s_gpu.idx_count) {
+                /* sheroes-nx: streaks off the characters. Run the CPU
+                 * interpreter over every vertex of the draw and report the
+                 * ones that land far from the rest (screen x/y more than four
+                 * spreads from the median), with their raw attributes 0, 1,
+                 * 2 and 5 (position, weights, indices, uv), and the uv range. */
+                static float xs[8192], ys[8192];
+                uint32_t nv = s_gpu.idx_count < 8192 ? s_gpu.idx_count : 8192, q, nout = 0, nok = 0;
+                float mx, my, sx, sy, u0 = 1e30f, u1 = -1e30f, w0 = 1e30f, w1 = -1e30f;
+                for (q = 0; q < nv; q++) {
+                    const VpOut *o = vp_vertex(s_gpu.idx[q]);
+                    if (!o->ok || o->pos[3] == 0.0f) continue;
+                    xs[nok] = o->pos[0]; ys[nok++] = o->pos[1];
+                    if (o->t0[0] < u0) u0 = o->t0[0];
+                    if (o->t0[0] > u1) u1 = o->t0[0];
+                    if (o->t0[1] < w0) w0 = o->t0[1];
+                    if (o->t0[1] > w1) w1 = o->t0[1];
+                }
+                if (nok > 4) {
+                    static float tx[8192], ty[8192];
+                    memcpy(tx, xs, nok * 4); memcpy(ty, ys, nok * 4);
+                    qsort(tx, nok, 4, ftrace_cmpf); qsort(ty, nok, 4, ftrace_cmpf);
+                    mx = tx[nok / 2]; my = ty[nok / 2];
+                    sx = tx[nok * 9 / 10] - tx[nok / 10] + 2.0f; sy = ty[nok * 9 / 10] - ty[nok / 10] + 2.0f;
+                    fprintf(stderr, "[FTRACE]   vcheck %u verts, median %.1f %.1f spread %.1f %.1f, uv %g..%g %g..%g\n",
+                            nok, mx, my, sx, sy, u0, u1, w0, w1);
+                    for (q = 0; q < nv && nout < 4; q++) {
+                        const VpOut *o = vp_vertex(s_gpu.idx[q]);
+                        float a0v[4], a1v[4], a2v[4], a5v[4];
+                        if (!o->ok) continue;
+                        if (fabsf(o->pos[0] - mx) < 4.0f * sx && fabsf(o->pos[1] - my) < 4.0f * sy) continue;
+                        nout++;
+                        fetch_attr(&s_gpu.attr[0], s_gpu.idx[q], a0v);
+                        fetch_attr(&s_gpu.attr[1], s_gpu.idx[q], a1v);
+                        fetch_attr(&s_gpu.attr[2], s_gpu.idx[q], a2v);
+                        fetch_attr(&s_gpu.attr[5], s_gpu.idx[q], a5v);
+                        fprintf(stderr, "[FTRACE]   voutlier idx %u at %u: pos %.1f %.1f w %g | v0 %g %g %g | v1 %g %g | v2 %g %g | v5 %g %g\n",
+                                s_gpu.idx[q], q, o->pos[0], o->pos[1], o->pos[3], a0v[0], a0v[1], a0v[2],
+                                a1v[0], a1v[1], a2v[0], a2v[1], a5v[0], a5v[1]);
+                    }
+                }
+            }
             if (rb.xform == 2) {   /* sheroes-nx: each vertex program once per traced frame */
                 int q, seen = 0;
                 for (q = 0; q < s_ftrace_vp_n; q++)

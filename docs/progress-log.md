@@ -1,5 +1,19 @@
 # Progress log (newest first)
 
+## 2026-10-29: play test 12, the streaks are not fixed-function skinning
+
+- Play test 12 (zoomed in): Tails' face in the stage is now right; past the old freeze the stage plays on. Still
+  wrong: dark streaks off Sonic's and Knuckles' heads (stage) and off Knuckles, Sonic, Shadow, Charmy, Big's belt and
+  Vector (team select); Espio and part of Omega scrambled; Sonic's and Knuckles' faces grey with no eyes; team
+  select models still flat.
+- The trace: SET_SKIN_MODE is 0 on every draw, so the fixed-function blending added earlier never runs. The
+  characters are vertex-program draws (program at slot 12, five variants of 18 to 29 instructions): two-bone
+  skinning from a palette of 3x4 matrices at c[8 + a0], a0 from attribute 2 (S32K shorts), weights from attribute
+  1 (UB_OGL bytes), normal in attribute 3 (CMP), uv in attribute 5. The program writes screen-space oPos itself.
+- Next diagnostics: the frame trace runs the CPU interpreter over every vertex of each vertex-program draw and lists
+  the ones far from the rest with their raw position, weights, indices and uv. A/B run with RECOMP_VK_INSTANCE=0
+  (no instanced draws) to test the instancing path.
+
 ## 2026-10-29: correction, fixed-function lighting, vertex program dump
 
 - Correction to the entry below: the characters are NOT fixed. Looking properly at Mark's play test 11 screenshots:

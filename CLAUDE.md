@@ -28,6 +28,9 @@ Workflow (Mark's choice, 2026-10-28): as on the Xbox 360 ports. Mark builds on h
 (`tools\win\build_pc.ps1`), runs boot tests and play tests, Claude reads `C:\sheroes-nx\out\logs` through the
 bridge and pushes fixes. Get the game working on the PC first, then the Switch. Avoid long cloud test runs (the cloud
 Linux build on lavapipe needs about 7 minutes to reach a stage).
+Mark's standing rule (2026-10-28, repeated after a slip): do not start cloud test runs on your own. Build checks
+(tools/linux/wincheck.sh) are fine; anything that runs the game goes to Mark. If the cloud would genuinely be
+more efficient for a step, say so and ask him first.
 Priority (Mark, 2026-10-28): playability first. Get a stage running and playable before cosmetic issues (the team
 select models, missing letters in text).
 

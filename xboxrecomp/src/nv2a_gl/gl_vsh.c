@@ -287,6 +287,7 @@ static const char s_vk_prelude[] =
     "    int u_xform;\n"
     "    float u_snap_y;\n"
     "    vec2 u_zclip;\n"     /* sheroes-nx: SET_CLIP_MIN/MAX as depth 0..1 */
+    "    vec4 u_fogv[5];\n"   /* sheroes-nx: fixed-function fog, see nv2a_gl_vsh_fixed */
     "};\n"
     /* Transform constants, 192 per instance: an instanced draw (nv2a_vk.c)
      * repeats one mesh with each instance's own set. NV2A_VK_INSTANCES. */
@@ -490,9 +491,11 @@ const char *nv2a_gl_vsh_main_program(void)
 const char *nv2a_gl_vsh_fixed(void)
 {
     /* Vulkan: u_xform is a member of the prelude's uniform block. */
-    static const char decl[] = "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n";
+    static const char decl[] = "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
+                               "uniform vec4 u_fogv[5];\n";
     static const char body[] =
         "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
+        "uniform vec4 u_fogv[5];\n"
         "void main() {\n"
         "    if (u_xform == 1) {\n"
         "        vec4 clip = vec4(dot(u_m[0], v0), dot(u_m[1], v0),\n"
@@ -507,6 +510,24 @@ const char *nv2a_gl_vsh_fixed(void)
         "    }\n"
         "    vD0 = clamp(v3, 0.0, 1.0); vD1 = clamp(v4, 0.0, 1.0);\n"
         "    vT0 = v9; vT1 = v10; vT2 = v11; vT3 = v12; vFog = 0.0;\n"
+        /* sheroes-nx: the fixed-function fog distance (xemu's vsh.c foggen),
+         * which the pixel shader turns into the fog factor (nv2a_fog). Before
+         * this vFog was 0 here, so with fog in the final combiner every
+         * fixed-function draw came out as the fog colour: Sonic Heroes'
+         * stage geometry drew white. u_fogv[0..2]: the model-view rows (eye
+         * position), [3]: SET_FOG_PLANE, [4]: x SET_FOG_GEN_MODE, y 1 when
+         * the back end fills these (Vulkan; the GL back end leaves 0). */
+        "    if (u_xform == 1 && u_fogv[4].y > 0.5) {\n"
+        "        vec3 e = vec3(dot(u_fogv[0], v0), dot(u_fogv[1], v0), dot(u_fogv[2], v0));\n"
+        "        int g = int(u_fogv[4].x + 0.5);\n"
+        "        if (g == 0) vFog = v4.a;\n"
+        "        else if (g == 1) vFog = length(e);\n"
+        "        else if (g == 6) vFog = v5.x;\n"
+        "        else {\n"
+        "            vFog = dot(u_fogv[3].xyz, e) + u_fogv[3].w;\n"
+        "            if (g == 3) vFog = abs(vFog);\n"
+        "        }\n"
+        "    }\n"
         "}\n";
     return nv2a_shader_vk ? body + sizeof decl - 1 : body;
 }

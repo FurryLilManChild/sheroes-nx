@@ -2457,6 +2457,11 @@ static int ready(void)
     }
     nv2a_shader_depth_clamp = s_have_depth_clamp;
     nv2a_shader_clip_distance = s_have_clip_dist;
+    {   /* sheroes-nx: fixed-function fog distance in the vertex shader
+         * (u_fogv); RECOMP_VK_FFP_FOG=0 restores the old raw vFog read. */
+        const char *e = getenv("RECOMP_VK_FFP_FOG");
+        nv2a_ffp_fog = !(e && *e == '0');
+    }
     {
         VkFormatProperties fp;
         vkGetPhysicalDeviceFormatProperties(s_pd, VK_FORMAT_D24_UNORM_S8_UINT, &fp);
@@ -3100,6 +3105,8 @@ typedef struct {
     int32_t xform;
     float snap_y;              /* nv2a_snap's offset for y; surf[3] is x's */
     float zclip[2];            /* sheroes-nx: SET_CLIP_MIN/MAX as depth 0..1 */
+    float pad0[2];
+    float fogv[5][4];          /* sheroes-nx: fixed-function fog (gl_vsh.c) */
 } VsBlock;
 
 typedef struct {
@@ -3448,6 +3455,20 @@ static void vk_draw_raw(const Nv2aRawBatch *b)
         vb->aa[0] = b->aa_sx > 0 ? b->aa_sx : 1.0f;
         vb->aa[1] = b->aa_sy > 0 ? b->aa_sy : 1.0f;
         vb->xform = b->xform == 1 ? 1 : 0;
+        {   /* sheroes-nx: what the fixed-function shader needs for the fog
+             * distance: SET_MODEL_VIEW_MATRIX0's rows (the composite's
+             * order, as lit_color in the executor reads them), SET_FOG_PLANE
+             * and SET_FOG_GEN_MODE. */
+            int k;
+            for (k = 0; k < 12; k++)
+                memcpy(&vb->fogv[k / 4][k % 4], &r[0x480 / 4 + k], 4);
+            for (k = 0; k < 4; k++)
+                memcpy(&vb->fogv[3][k], &r[0x9D0 / 4 + k], 4);
+            vb->fogv[4][0] = (float)r[0x2A0 / 4];
+            vb->fogv[4][1] = 1.0f;
+            vb->fogv[4][2] = vb->fogv[4][3] = 0.0f;
+            vb->pad0[0] = vb->pad0[1] = 0.0f;
+        }
         ub[0].buffer = s_f->ring;
         ub[0].offset = vat;
         ub[0].range = sizeof(VsBlock);

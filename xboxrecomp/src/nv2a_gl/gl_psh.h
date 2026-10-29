@@ -25,6 +25,7 @@ extern int nv2a_shader_vk;
  * read (0 raw, 1 fog disabled: factor 1, 2 through the mode). xform is the
  * batch's transform path (2 = vertex program). */
 void nv2a_fog_params(const uint32_t *regs, uint32_t xform, float out[4]);
+extern int nv2a_ffp_fog;   /* sheroes-nx: see gl_psh.c */
 
 /* Fragment shader source for `k`. Returns bytes written, -1 on overflow. */
 int nv2a_gl_psh(const Nv2aPshKey *k, char *buf, size_t cap);

@@ -3441,7 +3441,11 @@ static void raw_batch(void)
                         s_reg[(0x0AC0 + 4 * si) / 4], s_reg[(0x1E40 + 4 * si) / 4],
                         s_reg[(0x0260 + 4 * si) / 4], s_reg[(0x0AA0 + 4 * si) / 4],
                         s_reg[(0x0A60 + 4 * si) / 4], s_reg[(0x0A80 + 4 * si) / 4]);
-            fprintf(stderr, " | final c0 %08X c1 %08X\n", s_reg[0x1E20 / 4], s_reg[0x1E24 / 4]);
+            fprintf(stderr, " | final c0 %08X c1 %08X | fog en %X mode %X gen %X col %08X p %g %g plane %g %g %g %g"
+                    " mv2 %g %g %g %g\n", s_reg[0x1E20 / 4], s_reg[0x1E24 / 4],
+                    s_reg[0x02A4 / 4], s_reg[0x029C / 4], s_reg[0x02A0 / 4], s_reg[0x02A8 / 4],
+                    reg_f(0x09C0), reg_f(0x09C4), reg_f(0x09D0), reg_f(0x09D4), reg_f(0x09D8), reg_f(0x09DC),
+                    reg_f(0x04A0), reg_f(0x04A4), reg_f(0x04A8), reg_f(0x04AC));
             {
                 static const char *dir;
                 static int init;

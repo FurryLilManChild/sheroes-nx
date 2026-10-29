@@ -1,5 +1,19 @@
 # Progress log (newest first)
 
+## 2026-10-28: why the stage geometry is white (fixed-function fog)
+
+- The texture dump from Mark's play test shows the stage textures intact in guest memory (grass, cliffs, sea), so
+  the uploads were never the problem.
+- The frame trace shows the cause: the six sky, sea and far-cliff draws, which draw correctly, use the final combiner
+  0000000C (R0 as is). Every draw after them uses 130C0300 (fog.a x R0 + (1 - fog.a) x fog colour), and about 150 of
+  them are fixed-function (xform 1). The fixed-function vertex shader set vFog to 0, so fog.a was 0 and those draws
+  came out as the fog colour: white. The earlier RECOMP_DBG_NOFOG test only touched vertex-program draws, which is
+  why fog looked ruled out.
+- Fix (gl_vsh.c, gl_psh.c, nv2a_vk.c): the fixed-function shader computes the fog distance as xemu's foggen does
+  (spec alpha, radial, planar, abs planar, fog X) from SET_MODEL_VIEW_MATRIX0, SET_FOG_PLANE and SET_FOG_GEN_MODE,
+  and the pixel shader applies the fog mode and SET_FOG_ENABLE as for vertex programs. RECOMP_VK_FFP_FOG=0 turns
+  it off. The frame trace now prints the fog registers.
+
 ## 2026-10-28: diagnostic build for the white level geometry
 
 - The frame trace now prints every combiner stage the stage draws enable (the old line showed two of three), each

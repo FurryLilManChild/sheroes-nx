@@ -298,6 +298,11 @@ static void tex_fetch(Out *o, int t, uint32_t mode, const Nv2aPshKey *k)
     "    return clamp(f, 0.0, 1.0);\n" \
     "}\n"
 
+/* sheroes-nx: set by a back end whose fixed-function vertex shader computes
+ * the fog distance (nv2a_vk fills u_fogv); otherwise fixed-function draws
+ * keep the raw vFog read. */
+int nv2a_ffp_fog;
+
 void nv2a_fog_params(const uint32_t *regs, uint32_t xform, float out[4])
 {
     union { uint32_t u; float f; } p0, p1;
@@ -316,7 +321,7 @@ void nv2a_fog_params(const uint32_t *regs, uint32_t xform, float out[4])
     }
     /* A vertex program's oFog.x is the fog distance. The fixed-function
      * path does not generate one (vFog is 0), so it keeps the raw read. */
-    if (xform != 2)
+    if (xform != 2 && !(xform == 1 && nv2a_ffp_fog))
         out[3] = 0.0f;
     else
         out[3] = regs[0x02A4 / 4] ? 2.0f : 1.0f; /* SET_FOG_ENABLE */

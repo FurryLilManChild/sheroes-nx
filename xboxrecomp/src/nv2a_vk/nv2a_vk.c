@@ -3006,6 +3006,24 @@ static int upload_vertices(const Nv2aRawBatch *b)
         if (!(b->attr_direct & (1u << a)))
             continue;
         fmt[a] = vertex_format(b->direct[a].type, b->direct[a].size);
+        {   /* sheroes-nx: Vulkan fetches a vertex attribute only from an
+             * address that is a multiple of its component size; GPUs round a
+             * misaligned one down (AMD) and read the wrong bytes. Sonic
+             * Heroes' character vertices pack bytes and shorts ahead of
+             * floats, so their floats sit at odd 2-byte offsets: streaks and
+             * a scrambled Espio, gone with RECOMP_GL_DIRECT=0 (play test 14).
+             * Such an attribute is converted here instead. */
+            uint32_t t = b->direct[a].type;
+            uintptr_t c = t == 2 ? 4 : (t == 1 || t == 5) ? 2 : 1;
+            if (((uintptr_t)b->direct[a].ptr % c) || (b->direct[a].stride % c)) {
+                static int shown;
+                if (shown++ < 8)
+                    fprintf(stderr, "[VK] attribute %u (type %u size %u) at address %% 4 = %u, stride %u:"
+                            " misaligned, converted\n", a, t, b->direct[a].size,
+                            (unsigned)((uintptr_t)b->direct[a].ptr & 3), b->direct[a].stride);
+                fmt[a] = VK_FORMAT_UNDEFINED;
+            }
+        }
         if (fmt[a] != VK_FORMAT_UNDEFINED)
             direct |= (uint16_t)(1u << a);
         else

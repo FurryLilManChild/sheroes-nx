@@ -1,5 +1,15 @@
 # Progress log (newest first)
 
+## 2026-10-29: play test 14, the streaks are the direct vertex path
+
+- Run B with RECOMP_GL_DIRECT=0 (every attribute converted on the CPU): the team select is clean, no streaks, Espio
+  whole. So the direct attribute path is wrong for these meshes, not the program or the topology.
+- Likely cause: Vulkan fetches an attribute only from an address that is a multiple of its component size, and
+  AMD rounds a misaligned one down. The character vertices pack bytes (weights) and shorts (indices) between floats,
+  so floats can land on 2-byte boundaries. upload_vertices now converts any attribute whose address or stride is
+  not a multiple of its component size, and logs the first eight such cases ([VK] ... misaligned, converted) to
+  confirm.
+
 ## 2026-10-29: play test 13, streak diagnostics
 
 - RECOMP_VK_INSTANCE=0 (no instanced draws): the streaks and Espio are unchanged, so instancing is not the cause.

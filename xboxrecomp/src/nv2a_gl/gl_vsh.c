@@ -289,6 +289,7 @@ static const char s_vk_prelude[] =
     "    vec2 u_zclip;\n"     /* sheroes-nx: SET_CLIP_MIN/MAX as depth 0..1 */
     "    vec4 u_fogv[5];\n"   /* sheroes-nx: fixed-function fog, see nv2a_gl_vsh_fixed */
     "    vec4 u_tg[44];\n"    /* sheroes-nx: fixed-function texgen, see nv2a_gl_vsh_fixed */
+    "    vec4 u_sk[24];\n"    /* sheroes-nx: fixed-function skinning, see nv2a_gl_vsh_fixed */
     "};\n"
     /* Transform constants, 192 per instance: an instanced draw (nv2a_vk.c)
      * repeats one mesh with each instance's own set. NV2A_VK_INSTANCES. */
@@ -494,11 +495,13 @@ const char *nv2a_gl_vsh_fixed(void)
     /* Vulkan: u_xform is a member of the prelude's uniform block. */
     static const char decl[] = "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
                                "uniform vec4 u_fogv[5];\n"
-                               "uniform vec4 u_tg[44];\n";
+                               "uniform vec4 u_tg[44];\n"
+                               "uniform vec4 u_sk[24];\n";
     static const char body[] =
         "uniform int u_xform;      /* 0 pre-transformed, 1 fixed-function */\n"
         "uniform vec4 u_fogv[5];\n"
         "uniform vec4 u_tg[44];\n"
+        "uniform vec4 u_sk[24];\n"
         /* sheroes-nx: texture coordinate generation and the texture matrices
          * (xemu's vsh-ff.c), per stage i from u_tg[4 + 10 i]: [0] SET_TEXGEN
          * S/T/R/Q modes, [1].x SET_TEXTURE_MATRIX_ENABLE, [2..5]
@@ -524,10 +527,59 @@ const char *nv2a_gl_vsh_fixed(void)
         "        o = vec4(dot(o, u_tg[b + 2]), dot(o, u_tg[b + 3]), dot(o, u_tg[b + 4]), dot(o, u_tg[b + 5]));\n"
         "    return o;\n"
         "}\n"
+        /* sheroes-nx: vertex blending (SET_SKIN_MODE, xemu's vsh-ff.c): the eye
+         * position and normal are the weighted sum over model-view matrices
+         * 0..count-1, weights from attribute 1 (the "G" modes derive the last
+         * weight as 1 minus the others). Clip space then comes from the
+         * composite matrix applied to the blended eye position taken back to
+         * object space through matrix 0's inverse (composite = model-view 0
+         * x projection x viewport). u_sk: [0..8] model-view 1..3 rows 0-2,
+         * [9..12] SET_INVERSE_MODEL_VIEW_MATRIX0 (all four rows), [13..21]
+         * inverse model-view 1..3 rows 0-2, [22].x SET_SKIN_MODE. Without it
+         * the vertices bound to the other matrices stayed in the bind pose:
+         * thin streaks out of the characters. */
+        "vec3 nv2a_mv(int i, vec4 p) {\n"
+        "    if (i == 0) return vec3(dot(u_fogv[0], p), dot(u_fogv[1], p), dot(u_fogv[2], p));\n"
+        "    int b = 3 * (i - 1);\n"
+        "    return vec3(dot(u_sk[b], p), dot(u_sk[b + 1], p), dot(u_sk[b + 2], p));\n"
+        "}\n"
+        "vec3 nv2a_imv(int i, vec3 n) {\n"
+        "    if (i == 0) return vec3(dot(n, u_tg[0].xyz), dot(n, u_tg[1].xyz), dot(n, u_tg[2].xyz));\n"
+        "    int b = 13 + 3 * (i - 1);\n"
+        "    return vec3(dot(n, u_sk[b].xyz), dot(n, u_sk[b + 1].xyz), dot(n, u_sk[b + 2].xyz));\n"
+        "}\n"
+        "int nv2a_skin(vec4 p, vec3 nin, out vec3 e, out vec3 n) {\n"
+        "    int mode = int(u_sk[22].x + 0.5), count = 0;\n"
+        "    bool mix = false;\n"
+        "    if (mode == 1) { count = 2; mix = true; } else if (mode == 2) count = 2;\n"
+        "    else if (mode == 3) { count = 3; mix = true; } else if (mode == 4) count = 3;\n"
+        "    else if (mode == 5) { count = 4; mix = true; } else if (mode == 6) count = 4;\n"
+        "    if (count == 0) { e = nv2a_mv(0, p); n = nv2a_imv(0, nin); return 0; }\n"
+        "    e = vec3(0.0); n = vec3(0.0);\n"
+        "    float rest = 1.0;\n"
+        "    for (int i = 0; i < 4; i++) {\n"
+        "        if (i >= count) break;\n"
+        "        float w = (mix && i == count - 1) ? rest : v1[i];\n"
+        "        rest -= w;\n"
+        "        e += nv2a_mv(i, p) * w;\n"
+        "        n += nv2a_imv(i, nin) * w;\n"
+        "    }\n"
+        "    return count;\n"
+        "}\n"
         "void main() {\n"
+        "    vec3 sk_e = vec3(0.0), sk_n = vec3(0.0, 0.0, -1.0);\n"
+        "    int sk = 0;\n"
+        "    vec4 pos = v0;\n"
+        "    if (u_xform == 1 && u_fogv[4].y > 0.5) {\n"
+        "        sk = nv2a_skin(v0, v2.xyz, sk_e, sk_n);\n"
+        "        if (sk > 0) {\n"
+        "            vec4 eh = vec4(sk_e, 1.0);\n"
+        "            pos = eh.x * u_sk[9] + eh.y * u_sk[10] + eh.z * u_sk[11] + eh.w * u_sk[12];\n"
+        "        }\n"
+        "    }\n"
         "    if (u_xform == 1) {\n"
-        "        vec4 clip = vec4(dot(u_m[0], v0), dot(u_m[1], v0),\n"
-        "                         dot(u_m[2], v0), dot(u_m[3], v0));\n"
+        "        vec4 clip = vec4(dot(u_m[0], pos), dot(u_m[1], pos),\n"
+        "                         dot(u_m[2], pos), dot(u_m[3], pos));\n"
         "        float w = abs(clip.w) < 1e-6 ? 1e-6 : clip.w;\n"
         "        vec3 sw = clip.xyz + u_vpoff.xyz * w;\n"
         "        sw.xy *= u_aa;\n"
@@ -546,8 +598,7 @@ const char *nv2a_gl_vsh_fixed(void)
          * position), [3]: SET_FOG_PLANE, [4]: x SET_FOG_GEN_MODE, y 1 when
          * the back end fills these (Vulkan; the GL back end leaves 0). */
         "    if (u_xform == 1 && u_fogv[4].y > 0.5) {\n"
-        "        vec3 e = vec3(dot(u_fogv[0], v0), dot(u_fogv[1], v0), dot(u_fogv[2], v0));\n"
-        "        vec3 n = vec3(dot(v2.xyz, u_tg[0].xyz), dot(v2.xyz, u_tg[1].xyz), dot(v2.xyz, u_tg[2].xyz));\n"
+        "        vec3 e = sk_e, n = sk_n;\n"
         "        n = dot(n, n) > 1e-12 ? normalize(n) : vec3(0.0, 0.0, -1.0);\n"
         "        vT0 = nv2a_tc(0, v9, v0, e, n); vT1 = nv2a_tc(1, v10, v0, e, n);\n"
         "        vT2 = nv2a_tc(2, v11, v0, e, n); vT3 = nv2a_tc(3, v12, v0, e, n);\n"

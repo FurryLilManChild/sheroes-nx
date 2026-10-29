@@ -1589,6 +1589,10 @@ class FunctionTranslator:
             forward = scan(1, 1)
             backward = []
         if len(backward) + len(forward) < 2:
+            # sheroes-nx: a one-arm table indexed through an all-zero byte
+            # table (see lifter._analyze_switch_table).
+            if len(forward) == 1 and not backward and self.lifter._zero_dword(table_va + 4):
+                return forward
             return []
         backward.reverse()
         return backward + forward

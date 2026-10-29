@@ -3446,6 +3446,16 @@ static void raw_batch(void)
                     s_reg[0x02A4 / 4], s_reg[0x029C / 4], s_reg[0x02A0 / 4], s_reg[0x02A8 / 4],
                     reg_f(0x09C0), reg_f(0x09C4), reg_f(0x09D0), reg_f(0x09D4), reg_f(0x09D8), reg_f(0x09DC),
                     reg_f(0x04A0), reg_f(0x04A4), reg_f(0x04A8), reg_f(0x04AC));
+            fprintf(stderr, "[FTRACE]   skin %X mv0r3 %g %g %g %g imv0 %g %g %g %g / %g %g %g %g / %g %g %g %g / %g %g %g %g"
+                    " mv0 %g %g %g %g / %g %g %g %g / %g %g %g %g\n", s_reg[0x0328 / 4],
+                    reg_f(0x04B0), reg_f(0x04B4), reg_f(0x04B8), reg_f(0x04BC),
+                    reg_f(0x0580), reg_f(0x0584), reg_f(0x0588), reg_f(0x058C),
+                    reg_f(0x0590), reg_f(0x0594), reg_f(0x0598), reg_f(0x059C),
+                    reg_f(0x05A0), reg_f(0x05A4), reg_f(0x05A8), reg_f(0x05AC),
+                    reg_f(0x05B0), reg_f(0x05B4), reg_f(0x05B8), reg_f(0x05BC),
+                    reg_f(0x0480), reg_f(0x0484), reg_f(0x0488), reg_f(0x048C),
+                    reg_f(0x0490), reg_f(0x0494), reg_f(0x0498), reg_f(0x049C),
+                    reg_f(0x04A0), reg_f(0x04A4), reg_f(0x04A8), reg_f(0x04AC));
             {   /* sheroes-nx: texgen and texture matrices per enabled stage */
                 int ts;
                 for (ts = 0; ts < 4; ts++) {

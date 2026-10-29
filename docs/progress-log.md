@@ -1,5 +1,21 @@
 # Progress log (newest first)
 
+## 2026-10-29: play test 11 (shine fixed), the stage freeze, vertex blending
+
+- Texgen works: the characters and the team select models look right. The trace shows the shine passes use
+  normal-map texgen on stage 0 with a texture matrix (0x8511 on S, T, R), and some draws eye-linear on stages 1-3.
+- Freeze: the stage stopped while the HUD timer ran on. The log has one failed indirect call, to 0x00041FCB, from
+  sub_00041F70: `movzx ecx, byte [ebx + 0x42088]; jmp [ecx*4 + 0x42084]`, a one-arm jump table behind an all-zero
+  byte table (and another at 0x000420B0, and 0x000421D4 nearby). The lifter needs two arms for a switch, so the arm
+  became an indirect call to a non-function and the object's update gave up. Fix (lifter.py, translator.py): accept
+  one in-function arm when the dword after it is zero (the byte table). Regenerated in the cloud: only recomp_0006.c
+  changes, and it compiles.
+- Streaks out of the characters (team select and stage): fixed-function vertex blending (SET_SKIN_MODE) was not
+  implemented, so vertices bound to model-view matrices 1-3 stayed in the bind pose. The fixed-function shader now
+  blends model-view 0-3 by attribute 1's weights (xemu's vsh-ff.c), and projects the blended eye position through
+  the inverse of model-view 0 and the composite matrix. RECOMP_VK_SKIN=0 turns it off. Not confirmed yet: the trace
+  now prints SET_SKIN_MODE and both matrix 0s to check the inverse assumption.
+
 ## 2026-10-29: fixed-function texgen (the character shine)
 
 - The fixed-function vertex shader now generates texture coordinates as the NV2A does (xemu's vsh-ff.c): per stage

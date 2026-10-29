@@ -3108,6 +3108,7 @@ typedef struct {
     float pad0[2];
     float fogv[5][4];          /* sheroes-nx: fixed-function fog (gl_vsh.c) */
     float tg[44][4];           /* sheroes-nx: fixed-function texgen (gl_vsh.c) */
+    float sk[24][4];           /* sheroes-nx: fixed-function skinning (gl_vsh.c) */
 } VsBlock;
 
 typedef struct {
@@ -3476,6 +3477,21 @@ static void vk_draw_raw(const Nv2aRawBatch *b)
             memset(vb->tg, 0, sizeof vb->tg);
             for (k = 0; k < 12; k++)
                 memcpy(&vb->tg[k / 4][k % 4], &r[0x580 / 4 + k], 4);
+            /* Skinning: model-view 1..3 (0x4C0 + 0x40 (i - 1)) rows 0-2,
+             * inverse model-view 0 (0x580) whole, inverse model-view 1..3
+             * (0x5C0 + 0x40 (i - 1)) rows 0-2, SET_SKIN_MODE (0x328). */
+            memset(vb->sk, 0, sizeof vb->sk);
+            for (k = 0; k < 36; k++) {
+                memcpy(&vb->sk[k / 4][k % 4], &r[(0x4C0 + 0x40 * (k / 12)) / 4 + k % 12], 4);
+                memcpy(&vb->sk[13 + k / 4][k % 4], &r[(0x5C0 + 0x40 * (k / 12)) / 4 + k % 12], 4);
+            }
+            for (k = 0; k < 16; k++)
+                memcpy(&vb->sk[9 + k / 4][k % 4], &r[0x580 / 4 + k], 4);
+            {   /* RECOMP_VK_SKIN=0: no vertex blending (the old behaviour) */
+                static int skin = -1;
+                if (skin < 0) { const char *e = getenv("RECOMP_VK_SKIN"); skin = !(e && *e == '0'); }
+                vb->sk[22][0] = skin ? (float)(r[0x328 / 4] & 7) : 0.0f;
+            }
             for (k = 0; k < 4; k++) {
                 float (*t)[4] = &vb->tg[4 + 10 * k];
                 int j;

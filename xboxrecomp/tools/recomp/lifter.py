@@ -2646,6 +2646,17 @@ class Lifter:
         # likely a coincidence than a jump table.
         if len(inside) >= 2:
             return inside
+        # sheroes-nx: except a one-arm table indexed through a byte table,
+        #     movzx ecx, byte [ebx + T + 4] ; jmp [ecx*4 + T]
+        # where every index byte is 0, so the byte table right behind the
+        # single dword starts with a zero dword. Sonic Heroes' sub_00041F70
+        # (tables 0x00042084 and 0x000420B0) has two; unresolved, the arm
+        # became an indirect call to 0x00041FCB that failed and froze the
+        # stage (play test 11). The emitted switch compares the loaded value
+        # with its arms, so a coincidence still falls back to the indirect
+        # jump as before.
+        if len(inside) == 1 and self._zero_dword(table_va + 4):
+            return inside
         if table_va in self.jump_table_targets:
             # A census entry is authoritative (see _authoritative_jump_tables);
             # never rediscover arms it rejected.
@@ -2674,6 +2685,15 @@ class Lifter:
         if len(below) >= 2:
             return below
         return []
+
+    def _zero_dword(self, va):
+        """True when the 4 bytes at va in the XBE are all zero."""
+        if not self.xbe_data:
+            return False
+        offset = va_to_file_offset(va)
+        if offset is None or offset + 4 > len(self.xbe_data):
+            return False
+        return struct.unpack_from('<I', self.xbe_data, offset)[0] == 0
 
     def _leading_arms(self, targets):
         """Entries up to the first one outside the current function."""

@@ -4122,7 +4122,7 @@ static volatile LONG s_trap_hooked, s_trap_lock, s_trap_taken;
  * base (out/pc/sheroes_recomp.map resolves them). The thread is suspended
  * only while its frames are collected; nothing is printed until it runs
  * again, so a lock it holds (the CRT's, the heap's) cannot deadlock this. */
-static void pb_dump_thread_stack(unsigned long tid)
+void pb_dump_thread_stack(unsigned long tid)
 {
     uintptr_t base = (uintptr_t)GetModuleHandleA(NULL);
     DWORD64 frames[32];

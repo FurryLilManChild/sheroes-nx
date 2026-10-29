@@ -1841,6 +1841,44 @@ static void bridge_KeRaiseIrqlToDpcLevel(void)
     g_eax = (uint32_t)xbox_KeRaiseIrqlToDpcLevel();
 }
 
+/* sheroes-nx: RtlEnterCriticalSection callers by guest return address, and
+ * the lock, for a thread dump (tools/win/dump_threads.ps1). The first PC
+ * stage sat at NOW LOADING with 4.3 million enter/leave pairs: something
+ * polls under a lock for a flag nobody sets. */
+#define CS_HOT 256
+static volatile uint32_t s_cs_hot_ra[CS_HOT], s_cs_hot_cs[CS_HOT];
+static volatile LONG s_cs_hot_n[CS_HOT];
+
+static void cs_hot_count(uint32_t ra, uint32_t cs)
+{
+    uint32_t h = (ra * 2654435761u) >> 24, k;
+    for (k = 0; k < 8; k++, h = (h + 1) & (CS_HOT - 1)) {
+        if (s_cs_hot_ra[h] == ra) { InterlockedIncrement(&s_cs_hot_n[h]); return; }
+        if (!s_cs_hot_ra[h]) {
+            s_cs_hot_ra[h] = ra; s_cs_hot_cs[h] = cs;
+            InterlockedIncrement(&s_cs_hot_n[h]);
+            return;
+        }
+    }
+}
+
+void xbox_cs_hot_report(void)
+{
+    int shown, k, best;
+    LONG bn;
+    LONG taken[CS_HOT] = {0};
+    fprintf(stderr, "  [CSHOT] RtlEnterCriticalSection callers (since start):\n");
+    for (shown = 0; shown < 10; shown++) {
+        best = -1; bn = 0;
+        for (k = 0; k < CS_HOT; k++)
+            if (!taken[k] && s_cs_hot_n[k] > bn) { bn = s_cs_hot_n[k]; best = k; }
+        if (best < 0) break;
+        taken[best] = 1;
+        fprintf(stderr, "  [CSHOT]   from 0x%08X lock 0x%08X: %ld\n",
+                s_cs_hot_ra[best], s_cs_hot_cs[best], (long)bn);
+    }
+}
+
 /* ── RtlInitializeCriticalSection / Enter / Leave (ordinals 291, 277, 294) ─ */
 static void bridge_RtlInitializeCriticalSection(void)
 {
@@ -10203,6 +10241,8 @@ static void kernel_thunk_dispatch_body(void)
     g_kernel_call_count++;
     if (ordinal < XBOX_KERNEL_THUNK_TABLE_SIZE)
         g_ordinal_calls[ordinal]++;
+    if (ordinal == 277 && g_esp)       /* sheroes-nx: who spins on a lock */
+        cs_hot_count(BRIDGE_MEM32(g_esp), BRIDGE_MEM32(g_esp + 4));
 
     if (KERNEL_LOG_ON()) {
         /* The guest return address sits at the top of the guest stack: the

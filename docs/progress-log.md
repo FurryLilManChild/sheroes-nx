@@ -51,6 +51,13 @@
   (0x002A1320-0x002A1A30, switch table at 0x002A1A04) inside an instruction at 0x002A16AB. Removed; all PNGs
   decode. A scan tracing every function's control flow for starts inside another real function's instructions
   found nothing else (only harmless alias starts in sub_001D7CC0). Kept: [ZLIB] logs any failing inflate.
+- Play 5 (Mark): zero PNG errors, zero null calls, the HUD (score, 00:00:00, rings) and full text drawn; still no
+  control in the stage. The screenshot shows NOW LOADING for good and the timer at 0. The CRI stream keeps reading;
+  the Linux attract demo loads the same files and then s01.dmo and runs. The log shows RtlEnterCriticalSection /
+  RtlLeaveCriticalSection 4.3 million times (the Switch run: 38 million): a poll under a lock. Diagnostics:
+  tools/win/dump_threads.ps1 (flag file) prints the guest-lock holder, IRQL holders, the hottest
+  RtlEnterCriticalSection callers (counted in the kernel dispatcher) and every thread's host stack. The window's
+  close button now ends the program (SDL_QUIT was ignored).
 
 ## 2026-10-28: Switch tests, the Windows Vulkan build
 

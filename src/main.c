@@ -16,6 +16,7 @@
 #  include <windows.h>
 #  include <dbghelp.h>
 #  include <timeapi.h>
+#  include <tlhelp32.h>
 #else
 #  include <signal.h>
 #  include <unistd.h>
@@ -304,6 +305,52 @@ int main(int argc, char **argv)
 }
 #endif
 
+#ifdef _WIN32
+/* sheroes-nx: tools\win\dump_threads.ps1 creates the file named by
+ * RECOMP_THREAD_DUMP (run_game.ps1 sets it); this thread then prints the guest
+ * lock's holder, the threads holding IRQL, the hottest RtlEnterCriticalSection
+ * callers and every thread's host call stack (program-relative; the linker
+ * map resolves them). For a hang with no crash: the first PC stage sat at NOW
+ * LOADING for good (2026-10-28). */
+extern DWORD xbox_gil_report(void);
+extern void xbox_IrqlDumpHolders(void);
+extern void xbox_cs_hot_report(void);
+extern void pb_dump_thread_stack(unsigned long tid);
+
+static DWORD WINAPI thread_dump_watch(LPVOID arg)
+{
+    const char *flag = (const char *)arg;
+    for (;;) {
+        Sleep(500);
+        if (remove(flag) != 0)
+            continue;
+        fprintf(stderr, "[THREADS] dump requested; program base %p\n", (void *)GetModuleHandleA(NULL));
+        xbox_gil_report();
+        xbox_IrqlDumpHolders();
+        xbox_cs_hot_report();
+        {
+            HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+            THREADENTRY32 te;
+            DWORD pid = GetCurrentProcessId(), me = GetCurrentThreadId();
+            if (snap != INVALID_HANDLE_VALUE) {
+                te.dwSize = sizeof te;
+                if (Thread32First(snap, &te)) {
+                    do {
+                        if (te.th32OwnerProcessID == pid && te.th32ThreadID != me)
+                            pb_dump_thread_stack(te.th32ThreadID);
+                        te.dwSize = sizeof te;
+                    } while (Thread32Next(snap, &te));
+                }
+                CloseHandle(snap);
+            }
+        }
+        fprintf(stderr, "[THREADS] end of dump\n");
+        fflush(stderr);
+    }
+    return 0;
+}
+#endif
+
 static int game_main(void)
 {
     xbox_guest_pin(0);     /* the boot thread becomes the title's first thread */
@@ -323,6 +370,11 @@ static int game_main(void)
      * everywhere (the 60 Hz vblank clock, the guest lock, the executor); the
      * first PC title screen ran slowly. winmm is linked already. */
     timeBeginPeriod(1);
+    {
+        const char *flag = getenv("RECOMP_THREAD_DUMP");
+        if (flag && *flag)
+            CloseHandle(CreateThread(NULL, 0, thread_dump_watch, (LPVOID)flag, 0, NULL));
+    }
 #endif
     if (getenv("NFSU2_EXIT_TRACE"))
         atexit(print_guest_state);

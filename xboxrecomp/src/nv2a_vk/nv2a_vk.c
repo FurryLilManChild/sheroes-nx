@@ -63,6 +63,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#if !defined(_WIN32)
+#include <unistd.h>   /* _exit */
+#endif
 #include <string.h>
 #include <time.h>
 #if defined(_WIN32)
@@ -4385,7 +4388,22 @@ static void vk_flip(void)
 #if !defined(__SWITCH__)
     if (s_win) {
         SDL_Event e;
-        while (SDL_PollEvent(&e)) { }
+        while (SDL_PollEvent(&e)) {
+            /* sheroes-nx: the window's close button (it was ignored, so the
+             * game had to be ended from Task Manager). The log is flushed and
+             * the process ends at once: an orderly shutdown would wait on
+             * guest threads that never finish. */
+            if (e.type == SDL_QUIT) {
+                fprintf(stderr, "[VK] window closed\n");
+                fflush(stderr);
+                fflush(stdout);
+#ifdef _WIN32
+                TerminateProcess(GetCurrentProcess(), 0);
+#else
+                _exit(0);
+#endif
+            }
+        }
     }
 #endif
 }

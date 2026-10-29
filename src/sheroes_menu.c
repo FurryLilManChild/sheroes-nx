@@ -13,11 +13,10 @@
  *   invert camera (right stick)    the same filter, the RX / RY axes negated
  *   aspect 4:3 / 16:9              RECOMP_WIDESCREEN, at the next start
  *   hide blurry edges              nv2a_present_crop_rt (lines cropped top and
- *                                  bottom, the picture zoomed to fill). Mark's
- *                                  Switch screenshot (2026-10-27): the game
- *                                  draws 448 of its 480 lines and smears the
- *                                  last row into 16 lines at the top and 16 at
- *                                  the bottom (23 and 24 rows of 720 on screen)
+ *                                  bottom, the picture zoomed to fill). From
+ *                                  CoD-nx, whose game smears 16 lines at each
+ *                                  edge; Sonic Heroes shows no such bands on
+ *                                  the PC, so it defaults to Off here
  *   render resolution, FXAA,       nv2a_vk_scale_pct, nv2a_vk_fxaa,
  *   texture filtering              nv2a_vk_aniso (Vulkan renderer)
  *   FPS counter                    drawn by the overlay
@@ -91,8 +90,9 @@ static void opt_defaults(Options *o)
     memset(o, 0, sizeof *o);
     o->layout = LAYOUT_XBOX;
     memcpy(o->map, s_map_xbox, 8);
-    o->crop = 1;
-    o->scale = 0;
+    o->crop = 0;                /* Sonic Heroes has no edge bands (CoD-nx did) */
+    o->scale = 0;               /* 1x (Mark, 2026-10-29) */
+    o->widescreen = 0;          /* 4:3 (Mark, 2026-10-29) */
     o->fxaa = 1;
     o->aniso = 2;
     o->music = 2;
@@ -243,7 +243,7 @@ static void row_text(int r, const Options *o, const char **label, char *val, siz
     case R_CROP:
         *label = "Hide blurry edges";
         snprintf(val, vn, "%s", crops[o->crop]);
-        *note = "16 lines matches the game's bands";
+        *note = "Crops the top and bottom edges";
         break;
     case R_SCALE:
         *label = "Resolution";

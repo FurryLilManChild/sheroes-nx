@@ -1,5 +1,14 @@
 # Progress log (newest first)
 
+## 2026-10-29: first Switch build since the PC fixes
+
+- PC play test 15: the streaks, Espio and the odd sea spray are gone; about 59 fps. The log confirms the cause:
+  attribute 2 (S32K, one short) at an odd address with a 3-byte stride, converted on the CPU now.
+- Switch NRO built in the cloud (110 steps, 22 minutes on 2 cores) with everything above: LAHF, the lifter's
+  one-arm switches, fixed-function fog, texgen, lighting, misaligned attributes. Port menu defaults 1x, 4:3, edge
+  crop off; clocks stock unless sheroes_env.txt asks. Copied to Mark's out\sd\switch\sheroes\ (the bridge's
+  per-file limit is 30 MB, so it went over xz-compressed and was unpacked there; SHA-256 checked).
+
 ## 2026-10-29: play test 14, the streaks are the direct vertex path
 
 - Run B with RECOMP_GL_DIRECT=0 (every attribute converted on the CPU): the team select is clean, no streaks, Espio

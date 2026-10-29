@@ -1,5 +1,18 @@
 # Progress log (newest first)
 
+## 2026-10-28: textured stage (play test 10)
+
+- The fixed-function fog fix works: Mark's screenshot shows the stage textured (grass, path, stone, water) at a good
+  frame rate. Fog registers in the trace: linear, params 6 and -1/6000, plane (0,0,1,0), colour white, so fog only
+  starts far away.
+- Next, the characters: their second passes are additive (blend SRC_ALPHA, ONE, depth write off), colour c0 x
+  texture 0 (an environment highlight, 80C87F00), and the eye and head draws add texture 1 x c0 the same way. Those
+  need generated texture coordinates (SET_TEXGEN_S/T/R/Q from 0x03C0, sphere map or reflection map, and the texture
+  matrices). The fixed-function vertex shader has no texgen and passes the model's own coordinates (vT0 = v9), so
+  the highlight lands as a plain texture: the white patches on Sonic and Knuckles and Tails' odd head. Plan: print
+  the texgen and texture-matrix registers in the trace, then add texgen to the fixed-function shader.
+- Flickering lines in the level: not yet looked at (needs a description or a capture of when they show).
+
 ## 2026-10-28: why the stage geometry is white (fixed-function fog)
 
 - The texture dump from Mark's play test shows the stage textures intact in guest memory (grass, cliffs, sea), so

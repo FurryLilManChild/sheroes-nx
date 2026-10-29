@@ -815,6 +815,7 @@ static void bridge_run_thread_inline(recomp_func_t fn, uint32_t ctx1,
 
 void xbox_nx_retag_thread(void *entry);   /* win32_compat.c; Switch CPU report */
 void xbox_guest_pin(int interrupt);       /* win32_compat.c: one core for guest code */
+void xbox_nx_raise_host_thread(void); /* win32_compat.c / win32_host.c: above the guest threads on Horizon */
 
 static DWORD WINAPI bridge_thread_main(LPVOID param)
 {
@@ -2974,7 +2975,12 @@ static void kernel_vblank_tick(void)
         s_vb_next_us = now;
     if (now < s_vb_next_us)
         return;
-    if (now - s_vb_next_us > VBLANK_PERIOD_US / 2)
+    /* sheroes-nx: up to four periods late, catch up (the timer thread is
+     * back within a millisecond while one is still due) rather than drop
+     * the missed vblanks. Sonic Heroes paces itself by the vblank count; on
+     * the Switch the timer thread runs late often enough that dropping held
+     * it at 44 Hz, three quarters speed (Switch test 5). */
+    if (now - s_vb_next_us > 4 * VBLANK_PERIOD_US)
         s_vb_next_us = now + VBLANK_PERIOD_US;    /* far behind: restart here */
     else
         s_vb_next_us += VBLANK_PERIOD_US;         /* on time: no drift */
@@ -3324,6 +3330,11 @@ static DWORD WINAPI kernel_timer_thread(LPVOID unused)
 
     (void)unused;
     xbox_guest_pin(1);             /* DPCs and vblank: interrupt-like, guest core */
+    /* sheroes-nx: above the guest threads on Horizon (as the APU frame
+     * thread is): at the time-sliced priority it waited up to a 10 ms slice
+     * behind a busy thread on its core, and the vblank ran late. It sleeps
+     * between ticks. RECOMP_NX_AUDIO_PRIO=0 leaves it at the default. */
+    xbox_nx_raise_host_thread();
     if (slot < 0) {
         fprintf(stderr, "  [KERNEL] timer thread has no worker stack; "
                         "timer DPCs will not run\n");

@@ -1,5 +1,17 @@
 # Progress log (newest first)
 
+## 2026-10-29: Switch test 5, vblank 44 Hz
+
+- With the fair dispatch lock the stage vblank went from 0.5-7 Hz to 42-46 Hz, but menus fell from 57 to 44-45
+  Hz: the game paces itself by the vblank count, so everything ran at about three quarters speed. Mark: slightly
+  better at most.
+- The timer thread runs at Horizon's time-sliced priority and waits up to a 10 ms slice behind a busy thread on
+  its core; a tick more than half a period late was dropped. Now: the timer thread runs above the guest threads
+  (xbox_nx_raise_host_thread, as the APU frame thread does), and up to four periods late the vblanks catch up
+  instead of being dropped.
+- The game thread is at 85-95% of a core in the stage at 1020 MHz (40-45 frames drawn a second). Next: an LTO
+  build to compare.
+
 ## 2026-10-29: Switch test 4, playable but slow; a fair dispatch lock
 
 - The descriptor recycling worked: past NOW LOADING into the first stage, none of the PC rendering problems back.

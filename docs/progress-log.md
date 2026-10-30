@@ -1,5 +1,16 @@
 # Progress log (newest first)
 
+## 2026-10-30: Switch test 9 (stock, then 1785 MHz mid-run)
+
+- Overhead is down: the main thread's sync share fell from about 45% to about 24%, most of it now real waits
+  (11.4% in KeWaitForSingleObject). svcSignalProcessWideKey 17% to 3.2%.
+- Stock: 38-43 frames a second, game thread about 90-92% of a core. After Mark raised the CPU to 1785 MHz part way:
+  55-60 frames a second with the game thread at 62-82%. So at stock the game is CPU bound by roughly 1.5x.
+- But the vblank stayed at 40-42 Hz the whole time, even at 1785 MHz with headroom, while it is 60 Hz before the
+  game renders. The game paces itself by it, so it runs at about 70% speed at any clock. The timer thread now logs
+  where its passes go every 10 s ([vblank]: wait, raise to DISPATCH, vblank ISR, IRQs and DPCs), and an A/B run with
+  RECOMP_FAIR_DISPATCH=0 checks whether the fair dispatch lock is part of it.
+
 ## 2026-10-30: Switch test 8, second profile
 
 - Stage 38-45 frames a second, vblank 46-47 Hz, game thread 61-92% of a core: no visible change for Mark.

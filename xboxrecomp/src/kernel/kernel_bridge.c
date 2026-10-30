@@ -3368,17 +3368,53 @@ static DWORD WINAPI kernel_timer_thread(LPVOID unused)
     for (;;) {
         long long now;
         int i;
+        /* sheroes-nx: where the timer thread's time goes, every 10 s
+         * ([vblank] line). On the Switch the vblank held at 40-42 Hz even
+         * with the game thread below a full core (Switch test 9, 1785 MHz):
+         * each pass took about 24 ms. Phases: the wait, raising to DISPATCH
+         * (the dispatch lock), the vblank ISR, device IRQs and DPCs, timers
+         * and lowering. */
+        static long long ph_sum[6], ph_max[6], ph_t_report;
+        static unsigned ph_loops, ph_ticks0;
+        long long t0, t1, t2, t3, t4;
 
+        t0 = vb_now_us();
         /* a device interrupt, the next vblank, or 10 ms */
         WaitForSingleObject(xbox_irq_line_event(), kernel_vblank_wait_ms());
+        t1 = vb_now_us();
         /* ISRs and DPCs run at DISPATCH or above: raising takes the dispatch
          * lock (kernel_hal.c), so none of them runs while a game thread is in
          * a raised section. */
         pending_start_flush(0); /* threads whose creator made no further call */
         xbox_KfRaiseIrql(DISPATCH_LEVEL);
+        t2 = vb_now_us();
         kernel_vblank_tick();  /* the GPU's frame clock */
+        t3 = vb_now_us();
         kernel_service_irqs(); /* device interrupts; their DPCs drain below */
         kernel_drain_dpcs();   /* deferred work, before due timers */
+        t4 = vb_now_us();
+        {
+            long long d[4] = { t1 - t0, t2 - t1, t3 - t2, t4 - t3 };
+            int k;
+            for (k = 0; k < 4; k++) {
+                ph_sum[k] += d[k];
+                if (d[k] > ph_max[k]) ph_max[k] = d[k];
+            }
+            ph_loops++;
+            if (!ph_t_report) { ph_t_report = t4; ph_ticks0 = (unsigned)s_vb_count; }
+            if (t4 - ph_t_report >= 10000000LL) {
+                fprintf(stderr, "[vblank] %u passes, %u ticks in %.1f s; avg/max ms: wait %.2f/%.1f,"
+                        " raise %.2f/%.1f, vblank ISR %.2f/%.1f, IRQs+DPCs %.2f/%.1f\n",
+                        ph_loops, (unsigned)s_vb_count - ph_ticks0, (t4 - ph_t_report) / 1e6,
+                        ph_sum[0] / 1e3 / ph_loops, ph_max[0] / 1e3, ph_sum[1] / 1e3 / ph_loops, ph_max[1] / 1e3,
+                        ph_sum[2] / 1e3 / ph_loops, ph_max[2] / 1e3, ph_sum[3] / 1e3 / ph_loops, ph_max[3] / 1e3);
+                memset(ph_sum, 0, sizeof ph_sum);
+                memset(ph_max, 0, sizeof ph_max);
+                ph_loops = 0;
+                ph_t_report = t4;
+                ph_ticks0 = (unsigned)s_vb_count;
+            }
+        }
         now = (long long)GetTickCount64();
 
         for (i = 0; i < XBOX_MAX_TIMERS; i++) {

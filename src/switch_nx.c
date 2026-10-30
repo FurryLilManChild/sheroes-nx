@@ -252,7 +252,13 @@ static void perf_report(void)
     static uint32_t last_frames, last_seen;
     uint32_t f = nv2a_gl_frame_count();
     char vb[128];
-    xbox_vblank_report(10.0, vb, sizeof vb);
+    {   /* its own baseline: see xbox_vblank_count */
+        extern uint32_t xbox_vblank_count(void);
+        static uint32_t last_vb;
+        uint32_t c = xbox_vblank_count();
+        snprintf(vb, sizeof vb, "vblank %.1f Hz", (c - last_vb) / 10.0);
+        last_vb = c;
+    }
     fprintf(stderr, "[perf] %.1f fps, textures %llu MB, %u shader programs, %s\n",
             (f - last_frames) / 10.0,
             (unsigned long long)(nv2a_gl_texture_bytes() >> 20), nv2a_gl_program_count(), vb);

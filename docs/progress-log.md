@@ -1,5 +1,17 @@
 # Progress log (newest first)
 
+## 2026-10-30: Switch test 10, the vblank was never slow
+
+- The timer thread's own count: 599-600 ticks every 10 s in the stage, with and without the fair dispatch lock;
+  its passes are short (raise 0.00 ms average, vblank ISR 0.02-0.5, IRQs and DPCs 0.2-1.0). The [perf] line's
+  "vblank 40-44 Hz" (4 Hz with the fair lock off) was a broken reading: it and the renderer's [fps] line
+  (RECOMP_FPS_LOG=1) shared one baseline, each seeing only the ticks since the other. Fixed (xbox_vblank_count).
+  So the fair dispatch lock, the timer thread's priority and the vblank catch-up were answers to a problem that
+  was not there; they are harmless and stay (the fair lock can be turned off with RECOMP_FAIR_DISPATCH=0).
+- The real limit is the CPU at stock clocks: the game thread 91-93% of a core at 42-48 frames a second; at 1785 MHz
+  55-60 (test 9). Main thread profile (test 9, stock and 1785 together): guest .text 35%, the XDK D3D library
+  22%, waits and locks 24%, runtime 7%.
+
 ## 2026-10-30: Switch test 9 (stock, then 1785 MHz mid-run)
 
 - Overhead is down: the main thread's sync share fell from about 45% to about 24%, most of it now real waits

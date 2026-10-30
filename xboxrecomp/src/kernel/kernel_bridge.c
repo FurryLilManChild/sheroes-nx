@@ -2946,6 +2946,13 @@ static long long vb_now_us(void)
 static long long     s_vb_next_us;                /* when the next vblank is due */
 static volatile LONG s_vb_count;                  /* vblanks delivered */
 
+/* sheroes-nx: the raw count, for a reporter that keeps its own baseline.
+ * xbox_vblank_report's single static baseline was shared by the Switch's
+ * [perf] line and the renderer's [fps] line (RECOMP_FPS_LOG=1): each saw
+ * only the ticks since the other ran, and the [perf] line read 40-44 Hz (or
+ * 4 Hz) while 60 were delivered (Switch tests 4-10). */
+uint32_t xbox_vblank_count(void) { return (uint32_t)s_vb_count; }
+
 /* For the fps reports: "vblank 59.9 Hz" since the previous call, dt s ago. */
 void xbox_vblank_report(double dt, char *buf, size_t n)
 {

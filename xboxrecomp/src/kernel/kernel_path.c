@@ -629,6 +629,14 @@ static void fix_case(char *path, size_t base_len)
     struct stat st;
     char *p;
 
+#if defined(__SWITCH__)
+    /* sheroes-nx: the SD card's FAT32 / exFAT already ignores case, so a
+     * name that does not stat does not exist in any case: skip the stat and
+     * the directory scans (about 2% of Sonic Heroes' main thread in a stage
+     * on the console, profile of Switch test 8). */
+    (void)st; (void)p; (void)base_len;
+    return;
+#endif
     if (stat(path, &st) == 0 || base_len >= strlen(path))
         return;
 

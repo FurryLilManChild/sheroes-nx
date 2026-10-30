@@ -1,5 +1,16 @@
 # Progress log (newest first)
 
+## 2026-10-30: Switch test 8, second profile
+
+- Stage 38-45 frames a second, vblank 46-47 Hz, game thread 61-92% of a core: no visible change for Mark.
+- Profile: the wake-pending change worked where aimed (the flag thread's svcArbitrateLock 28% to 0.5%; the main
+  thread's svcArbitrateLock 12.8% to 3.2%), but svcSignalProcessWideKey grew to 17%: 9.5% from xbox_gil_suspend.
+  gil_unlock woke the condition variable on every release, and on Horizon that is a system call even with nobody
+  waiting; every kernel call and poll-loop yield releases the guest lock. Now it wakes only when a later ticket is
+  held (same for the fair dispatch lock).
+- Path lookups: on the Switch fix_case is skipped (FAT32 / exFAT ignore case), saving a stat and directory scans
+  per open (about 2%).
+
 ## 2026-10-29: Switch tests 6-7, LTO A/B and the first Switch profile
 
 - LTO A/B (Mark): neither felt much better. Stage 40-47 frames a second either way, game thread 80-95% of a core;

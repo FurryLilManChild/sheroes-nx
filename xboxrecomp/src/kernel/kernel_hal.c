@@ -258,7 +258,8 @@ static void fair_leave(void)
     if (g_fair_depth && --g_fair_depth == 0) {
         g_fair_owner = 0;
         g_fair_serving++;
-        WakeAllConditionVariable(&g_fair_cv);
+        if (g_fair_next != g_fair_serving)      /* only with someone queued */
+            WakeAllConditionVariable(&g_fair_cv);
     }
     LeaveCriticalSection(&g_fair_cs);
 }

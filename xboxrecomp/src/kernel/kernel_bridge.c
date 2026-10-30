@@ -717,7 +717,12 @@ static void gil_unlock(void)
     EnterCriticalSection(&s_gil_cs);
     s_gil_holder_tid = 0;
     s_gil_serving++;
-    WakeAllConditionVariable(&s_gil_cv);
+    /* sheroes-nx: wake only when someone holds a later ticket. On Horizon
+     * the wake is a system call even with nobody waiting: 9.5% of Sonic
+     * Heroes' main thread in a stage went to it (profile of Switch test 8),
+     * since every kernel call and poll-loop yield lets go of the lock. */
+    if (s_gil_next != s_gil_serving)
+        WakeAllConditionVariable(&s_gil_cv);
     LeaveCriticalSection(&s_gil_cs);
 }
 

@@ -1,5 +1,16 @@
 # Progress log (newest first)
 
+## 2026-10-30: test release 0.1.0
+
+- Mark: package an initial test release, noting it needs overclocking to perform well.
+- Port menu: CPU boost (off by default): NFSU2_CPU_MHZ=1785 at the next start (switch_boot reads the saved option
+  before setting the clocks; the env file still wins). 1785 MHz is the CPU clock of Nintendo's own boost mode.
+- Version 0.1.0 in the homebrew menu. README rewritten (status, known issues, install, port menu, building,
+  credits, legal); LICENSE names every MIT copyright holder; NOTICE.md lists the third-party licenses (xemu's code
+  under the LGPL; no FFmpeg in this build).
+- Release zip `sheroes-nx-v0.1.0-switch.zip`: switch/sheroes/ with the NRO, a readme, a note in game/, the license
+  texts. Release notes in `release_notes.md`.
+
 ## 2026-10-30: Switch test 10, the vblank was never slow
 
 - The timer thread's own count: 599-600 ticks every 10 s in the stage, with and without the fair dispatch lock;

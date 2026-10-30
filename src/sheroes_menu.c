@@ -20,6 +20,13 @@
  *   render resolution, FXAA,       nv2a_vk_scale_pct, nv2a_vk_fxaa,
  *   texture filtering              nv2a_vk_aniso (Vulkan renderer)
  *   FPS counter                    drawn by the overlay
+ *   CPU boost                      NFSU2_CPU_MHZ=1785 at the next start
+ *                                  (switch_boot reads it before setting the
+ *                                  clocks). At the stock 1020 MHz the game
+ *                                  thread is CPU bound at 40-48 frames a
+ *                                  second; at 1785 MHz it reaches 55-60
+ *                                  (Switch test 9, 2026-10-30). Off by
+ *                                  default
  *   music volume                   mcpx_apu_stream_gain: this game streams its
  *                                  music as stereo PCM voices (v062/v063 in
  *                                  game, bins 0/1 at -18 and -24 dB) and plays
@@ -74,6 +81,7 @@ typedef struct {
     int aniso;                  /* index into s_aniso_val */
     int fps;
     int music;                  /* index into s_music_pct */
+    int cpu_boost;              /* 1785 MHz CPU at the next start */
 } Options;
 
 static const int s_crop_lines[] = { 0, 16, 24 };
@@ -137,6 +145,7 @@ static int opt_load(Options *o)
         else if (!strcmp(line, "aniso"))      o->aniso = clampi(v, 0, N_OF(s_aniso_val) - 1);
         else if (!strcmp(line, "fps"))        o->fps = !!v;
         else if (!strcmp(line, "music"))      o->music = clampi(v, 0, N_OF(s_music_pct) - 1);
+        else if (!strcmp(line, "cpu_boost"))  o->cpu_boost = !!v;
         else if (!strncmp(line, "map", 3) && line[3] >= '0' && line[3] <= '7' && !line[4])
             o->map[line[3] - '0'] = (unsigned char)clampi(v, 0, 7);
     }
@@ -160,8 +169,8 @@ static void opt_save(const Options *o)
         return;
     }
     fprintf(f, "layout=%d\ninvert_x=%d\ninvert_y=%d\nwidescreen=%d\ncrop=%d\nscale=%d\n"
-            "fxaa=%d\naniso=%d\nfps=%d\nmusic=%d\n", o->layout, o->inv_x, o->inv_y, o->widescreen,
-            o->crop, o->scale, o->fxaa, o->aniso, o->fps, o->music);
+            "fxaa=%d\naniso=%d\nfps=%d\nmusic=%d\ncpu_boost=%d\n", o->layout, o->inv_x, o->inv_y,
+            o->widescreen, o->crop, o->scale, o->fxaa, o->aniso, o->fps, o->music, o->cpu_boost);
     for (k = 0; k < 8; k++)
         fprintf(f, "map%d=%d\n", k, o->map[k]);
     fclose(f);
@@ -184,7 +193,7 @@ static void opt_apply(const Options *o)
 
 enum {
     R_TITLE_CTRL, R_LAYOUT, R_MAP0, R_MAP7 = R_MAP0 + 7, R_INV_X, R_INV_Y,
-    R_TITLE_DISP, R_ASPECT, R_CROP, R_SCALE, R_FXAA, R_ANISO, R_FPS, R_MUSIC,
+    R_TITLE_DISP, R_ASPECT, R_CROP, R_SCALE, R_FXAA, R_ANISO, R_FPS, R_MUSIC, R_BOOST,
     R_DEFAULTS, R_CLOSE, R_COUNT
 };
 
@@ -270,6 +279,11 @@ static void row_text(int r, const Options *o, const char **label, char *val, siz
         snprintf(val, vn, "%d%%", s_music_pct[o->music]);
         *note = "On top of the game's own setting";
         break;
+    case R_BOOST:
+        *label = "CPU boost (1785 MHz)";
+        snprintf(val, vn, "%s", o->cpu_boost ? "On" : "Off");
+        *note = "Full speed. After a restart";
+        break;
     case R_DEFAULTS:
         *label = "Reset to defaults";
         *note = "Press A";
@@ -305,6 +319,7 @@ static void row_change(int r, int d, Options *o)
     case R_ANISO:  o->aniso = wrap(o->aniso, d, N_OF(s_aniso_val)); break;
     case R_FPS:    o->fps ^= 1; break;
     case R_MUSIC:  o->music = wrap(o->music, d, N_OF(s_music_pct)); break;
+    case R_BOOST:  o->cpu_boost ^= 1; break;
     }
     opt_apply(o);
 }
@@ -381,9 +396,10 @@ static void menu_input(const uint8_t *rep)
         if (s_sel == R_CLOSE)
             menu_close();
         else if (s_sel == R_DEFAULTS) {
-            int ws = s_opt.widescreen;
+            int ws = s_opt.widescreen, boost = s_opt.cpu_boost;
             opt_defaults(&s_opt);
             s_opt.widescreen = ws;  /* needs a restart; left as chosen */
+            s_opt.cpu_boost = boost;
             opt_apply(&s_opt);
         } else
             row_change(s_sel, 1, &s_opt);
@@ -610,6 +626,14 @@ static int overlay(int i, int pw, int ph, int lw, int lh, int *x, int *y, int *w
 }
 
 /* ---- boot -------------------------------------------------------------- */
+
+/* For switch_boot, before it sets the clocks: is CPU boost saved as on? */
+int sheroes_options_cpu_boost(void)
+{
+    Options o;
+    opt_defaults(&o);
+    return opt_load(&o) && o.cpu_boost;
+}
 
 void sheroes_menu_init(void)
 {

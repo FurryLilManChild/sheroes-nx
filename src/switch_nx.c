@@ -1200,6 +1200,13 @@ void switch_boot(void)
                         : "applet mode: launch via a game title (hold R) for full memory",
                (unsigned long)(total >> 20), (unsigned long)(used >> 20));
     }
+    {   /* The port menu's CPU boost (sheroes_menu.c); the env file still wins. */
+        extern int sheroes_options_cpu_boost(void);
+        if (!getenv("NFSU2_CPU_MHZ") && sheroes_options_cpu_boost()) {
+            setenv("NFSU2_CPU_MHZ", "1785", 1);
+            printf("[switch] CPU boost on (port menu): 1785 MHz\n");
+        }
+    }
     clk_apply();
     switch_saltynx_start();
     loader_start();

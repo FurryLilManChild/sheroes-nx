@@ -7,4 +7,7 @@
  * overlay. Call once at boot, before the kernel reads RECOMP_WIDESCREEN. */
 void sheroes_menu_init(void);
 
+/* Whether the saved options ask for CPU boost (read before the clocks are set). */
+int sheroes_options_cpu_boost(void);
+
 #endif

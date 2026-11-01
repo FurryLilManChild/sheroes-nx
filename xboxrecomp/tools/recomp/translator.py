@@ -449,11 +449,31 @@ def _localize_registers(lines):
     if not used:
         return lines
 
-    spill = " ".join(f"recomp_leaf_st_{r}(g_{r});" for r in used)
-    reload = " ".join(f"g_{r} = recomp_leaf_ld_{r}();" for r in used)
+    # sheroes-nx: each thread-local register's address is taken once, at
+    # entry, and the spills and reloads go through those pointers. Before,
+    # every recomp_leaf_st / _ld was its own thread-local access, and on the
+    # Switch each one is a call to __aarch64_read_tp (3.7% of Sonic Heroes'
+    # main thread on its own in a stage at stock clocks, profile 2026-10-30;
+    # the per-call cost of the spills and reloads around every call on top).
+    # The pointers are declared before the locals that shadow g_eax .. by
+    # name, so &g_x is still the thread-local. RECOMP_REG_TLS_PTRS=0 at regen
+    # keeps the old accessors.
+    tls_ptrs = os.environ.get("RECOMP_REG_TLS_PTRS", "1") != "0"
+    if tls_ptrs:
+        spill = " ".join(f"*_tp_{r} = g_{r};" for r in used)
+        reload = " ".join(f"g_{r} = *_tp_{r};" for r in used)
+        # RECOMP_OPAQUE hides where each pointer came from: otherwise GCC
+        # recomputes &g_x (a __aarch64_read_tp call) at every spill and
+        # reload instead of keeping the pointer, and nothing is saved.
+        decl = (" ".join(f"uint32_t *_tp_{r} = &g_{r};" for r in used) + " "
+                + " ".join(f"RECOMP_OPAQUE(_tp_{r});" for r in used) + " "
+                + " ".join(f"uint32_t g_{r} = *_tp_{r};" for r in used))
+    else:
+        spill = " ".join(f"recomp_leaf_st_{r}(g_{r});" for r in used)
+        reload = " ".join(f"g_{r} = recomp_leaf_ld_{r}();" for r in used)
+        decl = " ".join(f"uint32_t g_{r} = recomp_leaf_ld_{r}();" for r in used)
     out = lines[:at + 1]
-    out.append("    " + " ".join(f"uint32_t g_{r} = recomp_leaf_ld_{r}();" for r in used)
-               + " /* registers in locals */")
+    out.append("    " + decl + " /* registers in locals */")
     for l in body:
         out.append(_wrap_calls(l, _REG_CALL_RE, spill, reload))
     out.append(f"    {spill} /* registers back at the end */")

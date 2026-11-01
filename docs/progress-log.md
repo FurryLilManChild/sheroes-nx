@@ -1,5 +1,17 @@
 # Progress log (newest first)
 
+## 2026-11-01: stock-clock optimisation, step 1 (register spills through kept pointers)
+
+- Mark pointed at bejeweled3-nx's docs/optimising-functions.md (profile-driven: changed-only register write-backs,
+  inlining, hand-written natives for the hottest functions; about 1.3-1.5x there). Step 1 here: the cost of the
+  thread-local registers.
+- Every lifted function keeps its registers in locals and stores / reloads them around each call through the
+  thread-local g_eax .. g_esp. On the Switch each thread-local address is a __aarch64_read_tp call, and GCC
+  re-derived the address at every spill and reload rather than keeping it: 1,742 calls in recomp_0085.c (250
+  functions). Now each function takes the addresses once and hides them from the optimiser (RECOMP_OPAQUE, an
+  empty asm), so they stay in registers or on the stack: 1,050 calls in the same file, mostly one per function,
+  and slightly smaller code. RECOMP_REG_TLS_PTRS=0 at regen restores the old form.
+
 ## 2026-10-30: test release 0.1.0
 
 - Mark: package an initial test release, noting it needs overclocking to perform well.

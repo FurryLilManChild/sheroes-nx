@@ -1248,6 +1248,15 @@ extern volatile uint64_t g_icall_guard_misses;
  * ================================================================ */
 
 #ifdef RECOMP_GENERATED_CODE
+/* sheroes-nx: makes a value opaque to the optimiser (it cannot recompute it
+ * from its source), so a pointer to a thread-local register is kept rather
+ * than re-derived through __aarch64_read_tp at each use (translator.py,
+ * _localize_registers). */
+#if defined(__GNUC__) || defined(__clang__)
+#define RECOMP_OPAQUE(v) __asm__("" : "+r"(v))
+#else
+#define RECOMP_OPAQUE(v) ((void)0)
+#endif
 #define eax g_eax
 #define ecx g_ecx
 #define edx g_edx

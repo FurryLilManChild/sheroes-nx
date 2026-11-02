@@ -306,9 +306,10 @@ static inline void recomp_spin_hint(void)
 {
     static RECOMP_TLS unsigned turns;
 #if defined(__aarch64__)
-    __asm__ __volatile__("yield");
+    __asm__ __volatile__("yield" ::: "memory");   /* re-read guest memory each turn */
 #elif defined(__x86_64__) || defined(__i386__)
     __builtin_ia32_pause();
+    __asm__ __volatile__("" ::: "memory");
 #endif
     if ((++turns & 15u) == 0)
         recomp_spin_wake();         /* someone is waiting: answer now */

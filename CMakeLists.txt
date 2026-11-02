@@ -121,6 +121,17 @@ else()
     option(NFSU2_LTO "Link-time optimisation of the lifted code" OFF)
     set(NFSU2_LTO_JOBS "4" CACHE STRING "Parallel LTO link jobs")
     set(NFSU2_GEN_FLAGS "${NFSU2_GEN_OPT};-w;-fno-strict-aliasing;-fwrapv")
+    # NFSU2_GEN_PLAIN_MEM: the lifted code's guest memory accesses as plain loads
+    # and stores instead of volatile ones (recomp_types.h RECOMP_MEM_VOLATILE), so
+    # GCC can keep values in registers and merge accesses. Poll loops stay
+    # correct through the spin-hint pass (41 marked loops; RECOMP_SPIN_HINT has
+    # a memory clobber) and every call out of a function, which reloads memory.
+    # Only the generated code: the runtime and src/recomp_manual.c keep volatile.
+    # switch/build.sh passes it explicitly (GEN_PLAIN_MEM, default 1).
+    option(NFSU2_GEN_PLAIN_MEM "Plain (non-volatile) guest memory in the lifted code" OFF)
+    if(NFSU2_GEN_PLAIN_MEM)
+        list(APPEND NFSU2_GEN_FLAGS "-DRECOMP_MEM_VOLATILE=")
+    endif()
     if(NFSU2_LTO)
         list(APPEND NFSU2_GEN_FLAGS "-flto=auto")
         set_property(SOURCE src/recomp_manual.c APPEND PROPERTY

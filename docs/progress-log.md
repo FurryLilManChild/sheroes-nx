@@ -11,6 +11,14 @@
   functions). Now each function takes the addresses once and hides them from the optimiser (RECOMP_OPAQUE, an
   empty asm), so they stay in registers or on the stack: 1,050 calls in the same file, mostly one per function,
   and slightly smaller code. RECOMP_REG_TLS_PTRS=0 at regen restores the old form.
+- Switch test (NRO f42470f, stock 1020 MHz forced with NFSU2_CPU_MHZ=0, profiler after 60 s): in the stage
+  31-56 fps, 42.3 average over 31 readings, no measurable change from the earlier 40-48 at stock. __aarch64_read_tp
+  fell from 3.7% to 2.9% of the main thread's samples, as intended, but that is too small to show in fps.
+- Main thread still the limit: 92% of a core. Its samples: guest .text 37%, D3D and other libraries 26%,
+  blocked 20% (7.2% in gil_lock waiting for another guest thread, 4.6% in kdisp_wait, the game's own event
+  waits), runtime 3%. The renderer thread (nv2a_ack_thread) is about half idle, the APU thread mostly idle.
+- Next candidate: guest memory accesses without volatile (RECOMP_MEM_VOLATILE empty for the generated code), with
+  the 41 marked wait loops as the safety net; then the gil_lock waits.
 
 ## 2026-10-30: test release 0.1.0
 

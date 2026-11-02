@@ -1,6 +1,19 @@
 # Progress log (newest first)
 
-## 2026-11-01: stock-clock optimisation, step 1 (register spills through kept pointers)
+## 2026-11-01: stock-clock optimisation, step 2 (plain guest memory), no gain
+
+- NRO 0b8d36b: the lifted code built with -DRECOMP_MEM_VOLATILE= (NFSU2_GEN_PLAIN_MEM), the spin hint with a
+  memory clobber. 650 KB smaller NRO, no freeze in the stage. Stock clocks: 42.7 fps average in the stage (25
+  readings, 30-59), against 42.3 for f42470f: no measurable change. Main-thread shares unchanged (guest .text 35%,
+  D3D and libraries 24%, blocked 24%).
+- Instruction-level look at the profile (pc of each main-thread sample in the 25 hottest lifted functions): the
+  samples sit on loads, and the hottest are the guest data loads themselves (`ldr w, [base, w, uxtw]`), e.g.
+  sub_002A9600. The address folding (cmp/and/csel/orr) is about 5% of those samples. The time is the game's own
+  memory traffic, not translation overhead the compiler could remove.
+- Mark asked about the long black screen at boot. From f42470f's log: 1-12 s the game lists every disc folder
+  (two pauses of about 3.5 s), 12-36 s it opens all ~3,900 disc files one by one and keeps them open (300 files a
+  second at first, 100 at the end; the fd recycling closes them in batches past 256), 36-45 s quiet, first picture
+  at about 45 s.
 
 - Mark pointed at bejeweled3-nx's docs/optimising-functions.md (profile-driven: changed-only register write-backs,
   inlining, hand-written natives for the hottest functions; about 1.3-1.5x there). Step 1 here: the cost of the

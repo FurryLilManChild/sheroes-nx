@@ -29,8 +29,9 @@
 #                    BUILD_DIR gets a -lto suffix and the NRO is staged as
 #                    sheroes[-vulkan]-lto.nro next to the normal one, for A/B.
 #                    LTO_JOBS parallel link jobs (default 4, ~2 GB each)
-#   GEN_PLAIN_MEM=1  (default) the lifted code's guest memory accesses as plain
-#                    loads and stores (NFSU2_GEN_PLAIN_MEM); 0: volatile, as before
+#   GEN_PLAIN_MEM=1  the lifted code's guest memory accesses as plain loads and
+#                    stores (NFSU2_GEN_PLAIN_MEM). Default 0 (volatile): plain
+#                    gave no measurable fps on the Switch (2026-11-01)
 #   FFMPEG_DIR       VP6-only LGPL FFmpeg for the movies (tools/build_ffmpeg_vp6.sh
 #                    switch; default $REPO/out/ffmpeg-vp6-switch). Without
 #                    it the lifted (slow) decoder plays them.
@@ -87,7 +88,7 @@ cmake -S "$REPO" -B "$BUILD" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DXBOXRECOMP_DIR="$TK" -DNFSU2_GEN_DIR="$GEN" \
     -DNFSU2_SWITCH_ICON="$REPO/switch/icon.jpg" "${VK_ARGS[@]}" "${FF_ARGS[@]}" \
-    "${LTO_ARGS[@]}" -DNFSU2_GEN_PLAIN_MEM="$( [ "${GEN_PLAIN_MEM:-1}" = "1" ] && echo ON || echo OFF )" >/dev/null
+    "${LTO_ARGS[@]}" -DNFSU2_GEN_PLAIN_MEM="$( [ "${GEN_PLAIN_MEM:-0}" = "1" ] && echo ON || echo OFF )" >/dev/null
 ninja -C "$BUILD" -j"$JOBS"
 
 DEST="$SD/switch/sheroes"

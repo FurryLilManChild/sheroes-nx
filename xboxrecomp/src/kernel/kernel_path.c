@@ -569,6 +569,11 @@ void xbox_path_init(const char* game_dir, const char* save_dir)
 
     strip_trailing_slash(s_game_dir);
     strip_trailing_slash(s_save_dir);
+    {
+        /* sheroes-nx: the disc's file list (disc_index.c), built on first use. */
+        extern void disc_index_set_root(const char *game_dir);
+        disc_index_set_root(s_game_dir);
+    }
 
     /* Save-side directories and partition device images; see the Win32
      * xbox_path_init for why each has to exist before the title asks. */

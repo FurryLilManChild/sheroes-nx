@@ -860,12 +860,21 @@ static ssize_t host_write(int fd, const void *buf, size_t len)
 #define host_write write
 #endif
 
+/* sheroes-nx: stat() of a disc file from the in-memory list (disc_index.c);
+ * -1 when the path is not on the list, and the SD card answers. */
+int disc_index_stat(const char *host_path, struct stat *st);
+
+static int stat_fast(const char *path, struct stat *st)
+{
+    return disc_index_stat(path, st) == 0 ? 0 : stat(path, st);
+}
+
 /* fstat, or stat of the handle's path for a directory handle. */
 static int handle_stat(HANDLE h, int fd, struct stat *st)
 {
     if (fd == XBOX_DIR_FD) {
         const char *p = w32_handle_path(h);
-        return p ? stat(p, st) : -1;
+        return p ? stat_fast(p, st) : -1;
     }
     return fstat(fd, st);
 }
@@ -899,7 +908,7 @@ NTSTATUS __stdcall xbox_NtCreateFile(
          * would fstat it stat the path instead (handle_stat). */
         {
             struct stat dst;
-            if (stat(host_path, &dst) == 0 && S_ISDIR(dst.st_mode)) {
+            if (stat_fast(host_path, &dst) == 0 && S_ISDIR(dst.st_mode)) {
                 fd = XBOX_DIR_FD;
             } else {
                 errno = ENOENT;
@@ -910,6 +919,21 @@ NTSTATUS __stdcall xbox_NtCreateFile(
         fd = open(host_path, O_RDONLY | O_DIRECTORY);
 #endif
     } else {
+        /* sheroes-nx: a read-only open of a file on the disc list gets a
+         * handle with no descriptor; the file is opened on its first read
+         * (disc_index.c: the boot opens ~3,900 of them). */
+        int oflags = posix_open_flags(DesiredAccess, CreateDisposition);
+        struct stat lst;
+        if ((oflags & (O_ACCMODE | O_CREAT | O_TRUNC | O_APPEND)) == O_RDONLY
+            && disc_index_stat(host_path, &lst) == 0 && S_ISREG(lst.st_mode)) {
+            *FileHandle = w32_open_handle_lazy(host_path, oflags);
+            if (IoStatusBlock) {
+                IoStatusBlock->Status = STATUS_SUCCESS;
+                IoStatusBlock->Information = 1;
+            }
+            XBOX_TRACE(XBOX_LOG_FILE, "NtCreateFile: %s -> handle=%p (lazy)", host_path, *FileHandle);
+            return STATUS_SUCCESS;
+        }
         /* sheroes-nx: keep the host's open-file count under its limit (see
          * w32_open_handle_reopenable); retry once after freeing some. */
         w32_fd_make_room();
@@ -1050,14 +1074,21 @@ NTSTATUS __stdcall xbox_NtQueryInformationFile(
     if (!IoStatusBlock || !FileInformation)
         return STATUS_INVALID_PARAMETER;
 
-    int fd = w32_handle_fd(FileHandle);
-    if (fd < 0 && fd != XBOX_DIR_FD)
-        return STATUS_INVALID_HANDLE;
-
     struct stat st;
-    if (FileInformationClass != XboxFilePositionInformation) {
-        if (handle_stat(FileHandle, fd, &st) != 0)
-            return STATUS_UNSUCCESSFUL;
+    int fd = 0;
+    /* sheroes-nx: a handle with no descriptor (disc_index.c) answers size and
+     * attributes from the disc list without opening the file. */
+    const char *lpath = w32_handle_path(FileHandle);
+    int have_st = FileInformationClass != XboxFilePositionInformation
+        && lpath && w32_handle_fd_parked(FileHandle) && disc_index_stat(lpath, &st) == 0;
+    if (!have_st) {
+        fd = w32_handle_fd(FileHandle);
+        if (fd < 0 && fd != XBOX_DIR_FD)
+            return STATUS_INVALID_HANDLE;
+        if (FileInformationClass != XboxFilePositionInformation) {
+            if (handle_stat(FileHandle, fd, &st) != 0)
+                return STATUS_UNSUCCESSFUL;
+        }
     }
 
     switch (FileInformationClass) {
@@ -1233,7 +1264,7 @@ NTSTATUS __stdcall xbox_NtQueryFullAttributesFile(
     const char* xbox_path = get_xbox_path(ObjectAttributes);
     if (!xbox_path || !xbox_translate_path(xbox_path, host_path, MAX_PATH))
         return STATUS_OBJECT_PATH_NOT_FOUND;
-    if (stat(host_path, &st) != 0)
+    if (stat_fast(host_path, &st) != 0)
         return STATUS_OBJECT_NAME_NOT_FOUND;
 
     unix_to_filetime(st.st_ctime, 0, &FileInformation->CreationTime);
@@ -1355,7 +1386,7 @@ NTSTATUS __stdcall xbox_NtQueryDirectoryFile(
 
     char full[MAX_PATH];
     snprintf(full, sizeof(full), "%s/%s", dpath ? dpath : ".", de->d_name);
-    if (stat(full, &st) != 0)
+    if (stat_fast(full, &st) != 0)
         memset(&st, 0, sizeof(st));
     LeaveCriticalSection(&s_dir_cs);
 

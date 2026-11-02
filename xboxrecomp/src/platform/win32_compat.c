@@ -567,6 +567,32 @@ HANDLE w32_open_handle_reopenable(int fd, const char *host_path, int flags)
     return (HANDLE)o;
 }
 
+HANDLE w32_open_handle_lazy(const char *host_path, int flags)
+{
+    w32_object *o = obj_alloc(K_FILE);
+    o->fd         = -1;
+    o->file_path  = strdup(host_path);
+    o->fd_flags   = flags & ~(O_CREAT | O_EXCL | O_TRUNC);
+    o->fd_evicted = 1;
+    o->fd_pos     = 0;
+    pthread_mutex_lock(&s_fd_mx);
+    o->fd_used = ++s_fd_tick;
+    pthread_mutex_unlock(&s_fd_mx);
+    return (HANDLE)o;
+}
+
+int w32_handle_fd_parked(HANDLE h)
+{
+    w32_object *o = obj_from(h);
+    int r;
+    if (!o || o->kind != K_FILE)
+        return 0;
+    pthread_mutex_lock(&s_fd_mx);
+    r = o->fd_evicted;
+    pthread_mutex_unlock(&s_fd_mx);
+    return r;
+}
+
 HANDLE w32_open_handle(int fd, const char *host_path)
 {
     return w32_open_handle_reopenable(fd, host_path, -1);

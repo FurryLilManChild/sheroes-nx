@@ -132,6 +132,12 @@ HANDLE      w32_open_handle(int fd, const char *host_path);
  * guest can hold more files open than the host allows. */
 HANDLE      w32_open_handle_reopenable(int fd, const char *host_path, int flags);
 void        w32_fd_make_room(void);
+/* sheroes-nx: a reopenable file handle with no descriptor yet: opened on the
+ * first call that needs one (w32_handle_fd). For disc files listed by
+ * disc_index.c, so the boot's thousands of opens never touch the SD card. */
+HANDLE      w32_open_handle_lazy(const char *host_path, int flags);
+/* 1 if a file handle currently has no descriptor (lazy or closed to make room). */
+int         w32_handle_fd_parked(HANDLE h);
 void        w32_fd_shed(void);
 int         w32_handle_fd(HANDLE h);
 const char *w32_handle_path(HANDLE h);

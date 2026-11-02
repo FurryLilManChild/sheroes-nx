@@ -671,12 +671,30 @@ static int gil_higher_waiting(int p)
     return 0;
 }
 
+/* sheroes-nx: who keeps the main thread waiting for the lock. Keyed by the
+ * holder when the wait began (thread id, guest priority, inside an ISR/DPC);
+ * reported with the main thread's waits every 10 s (xbox_main_wait_report).
+ * The Switch profile of 2026-11-01 had 7% of the main thread in gil_lock. */
+static volatile int s_gil_holder_isr;
+static struct { DWORD tid; int prio, isr; uint32_t n; uint64_t us; } s_gw[12];
+static uint64_t s_gw_other_us;
+
 static void gil_lock(void)
 {
     uint64_t me;
     int eager = gil_eager(), prio = eager ? gil_prio_now() : 0, counted = 0;
+    DWORD w_tid = 0;
+    int w_prio = 0, w_isr = 0, w_main = 0;
+    LARGE_INTEGER w_a;
     EnterCriticalSection(&s_gil_cs);
     me = s_gil_next++;
+    if (t_gil_main && me != s_gil_serving) {
+        w_main = 1;
+        w_tid = s_gil_holder_tid;
+        w_prio = s_gil_holder_prio - 16;
+        w_isr = s_gil_holder_isr;
+        QueryPerformanceCounter(&w_a);
+    }
     if (me != s_gil_serving && eager) {
         s_gil_waiting[prio]++;
         counted = 1;
@@ -709,6 +727,23 @@ static void gil_lock(void)
         g_gil_contended = 0;               /* nobody behind us */
     }
     s_gil_holder_tid = GetCurrentThreadId();
+    s_gil_holder_isr = 0;
+    if (w_main) {
+        LARGE_INTEGER b, f;
+        uint64_t us;
+        int k;
+        QueryPerformanceCounter(&b);
+        QueryPerformanceFrequency(&f);
+        us = (uint64_t)((b.QuadPart - w_a.QuadPart) * 1000000.0 / f.QuadPart);
+        for (k = 0; k < 12; k++)
+            if (!s_gw[k].n || (s_gw[k].tid == w_tid && s_gw[k].prio == w_prio && s_gw[k].isr == w_isr)) {
+                s_gw[k].tid = w_tid; s_gw[k].prio = w_prio; s_gw[k].isr = w_isr;
+                s_gw[k].n++; s_gw[k].us += us;
+                break;
+            }
+        if (k == 12)
+            s_gw_other_us += us;
+    }
     LeaveCriticalSection(&s_gil_cs);
 }
 
@@ -788,7 +823,7 @@ void recomp_preempt(void)
 #define GUEST_CALL_ATOMIC(f) do { xbox_gil_enter(); t_gil_nopreempt++; (f)(); \
                                   t_gil_nopreempt--; xbox_gil_leave(); } while (0)
 
-void xbox_gil_isr_begin(void) { xbox_gil_enter(); t_gil_nopreempt++; }
+void xbox_gil_isr_begin(void) { xbox_gil_enter(); t_gil_nopreempt++; s_gil_holder_isr = 1; }
 void xbox_gil_isr_end(void)   { t_gil_nopreempt--; xbox_gil_leave(); }
 
 static RECOMP_TLS int g_is_spawned_thread = 0;
@@ -849,6 +884,8 @@ static DWORD WINAPI bridge_thread_main(LPVOID param)
     guest_thread_self();
     xbox_nx_retag_thread((void *)fn);
     xbox_guest_pin(0);
+    fprintf(stderr, "  [THREAD] tid %lu runs guest thread %p\n",
+            (unsigned long)GetCurrentThreadId(), (void *)fn);
 
     bridge_run_thread_inline(fn, ctx1, ctx2);
 
@@ -2314,6 +2351,23 @@ void xbox_main_wait_report(double secs)
                             s_mw[k].us / (secs * 1e4), s_mw[k].n);
     fprintf(stderr, "%s\n", line);
     memset(s_mw, 0, sizeof s_mw);
+    /* The guest lock, by whoever held it when the main thread started waiting
+     * (tid 0: between holders, i.e. queued behind other waiters). */
+    if (s_gil_on <= 0)
+        return;
+    len = snprintf(line, sizeof line, "[perf] main thread lock waits by holder:");
+    EnterCriticalSection(&s_gil_cs);
+    for (k = 0; k < 12 && s_gw[k].n && len < (int)sizeof line - 60; k++)
+        if (s_gw[k].us > secs * 2000.0)          /* over 0.2% */
+            len += snprintf(line + len, sizeof line - len, " tid%lu/p%d%s=%.1f%%/%u",
+                            (unsigned long)s_gw[k].tid, s_gw[k].prio, s_gw[k].isr ? "/isr" : "",
+                            s_gw[k].us / (secs * 1e4), s_gw[k].n);
+    if (s_gw_other_us)
+        len += snprintf(line + len, sizeof line - len, " other=%.1f%%", s_gw_other_us / (secs * 1e4));
+    memset(s_gw, 0, sizeof s_gw);
+    s_gw_other_us = 0;
+    LeaveCriticalSection(&s_gil_cs);
+    fprintf(stderr, "%s\n", line);
 }
 
 /* ── MmQueryAddressProtect (ordinal 179) ─────────────────── */
@@ -3354,6 +3408,7 @@ static DWORD WINAPI kernel_timer_thread(LPVOID unused)
         return 0;
     }
     g_esp = XBOX_WORKER_STACK_TOP(slot);
+    fprintf(stderr, "  [KERNEL] timer thread is tid %lu\n", (unsigned long)GetCurrentThreadId());
     fprintf(stderr, "  [KERNEL] timer thread on worker stack slice %d (top 0x%08X)\n",
             slot, XBOX_WORKER_STACK_TOP(slot));
     fflush(stderr);

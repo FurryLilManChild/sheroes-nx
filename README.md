@@ -10,7 +10,7 @@ the PC. The Xbox's graphics chip (NV2A) is drawn by a Vulkan renderer, and its s
 
 ## Status
 
-**Version 0.1.0 is a test release for the Switch.** It boots, plays the menus, the movies and the first stage, with
+**Version 0.2.0 is a pre-release for the Switch.** It boots, plays the menus, the movies and the first stage, with
 the graphics right (textures, lighting, character models).
 
 **It needs the CPU boost to run at full speed.** At the Switch's stock CPU clock (1020 MHz) the game runs at about
@@ -30,8 +30,8 @@ Session-by-session notes: [docs/progress-log.md](docs/progress-log.md).
 
 - Slow at stock clocks: turn on **CPU boost** in the port menu (takes effect after a restart).
 - Only the first stage has been played. Anything past it is untested.
-- About 45 seconds on a dark or loading screen at startup: the game opens every file on the disc once, and the SD
-  card is slow at that. A later version will shorten it.
+- A dark screen for a while at startup. 0.2.0 made it much shorter (the port now lists the disc once instead of
+  opening every file on the SD card), but it is not instant.
 - Start the game with title takeover (hold R while opening a game, then pick Sonic Heroes). The album applet does
   not have enough memory.
 - The aspect ratio and CPU boost settings take effect after a restart.
@@ -41,7 +41,7 @@ Session-by-session notes: [docs/progress-log.md](docs/progress-log.md).
 You need a Switch with custom firmware (Atmosphere) and your own copy of the game: the USA Xbox disc, dumped as an
 `.iso`.
 
-1. Download `sheroes-nx-v0.1.0-switch.zip` from this repository's **Releases** page.
+1. Download `sheroes-nx-v0.2.0-switch.zip` from this repository's **Releases** page.
 2. Extract the zip to the root of your SD card. It creates `switch/sheroes/` with `sheroes.nro` in it.
 3. Extract the files from your disc image with [extract-xiso](https://github.com/XboxDev/extract-xiso), for example
    `extract-xiso -x "Sonic Heroes (USA).iso"`, which makes a folder of the disc's files.

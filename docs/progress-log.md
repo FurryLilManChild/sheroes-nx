@@ -1,5 +1,12 @@
 # Progress log (newest first)
 
+## 2026-11-03: pre-release 0.2.0
+
+- Switch test of 3c4aa92/6d3b0f2 (disc list, lazy opens): Mark reports the black screen at boot much shorter (no
+  log from that run). Mark: package a pre-release, 0.2.0 given the performance.
+- Version 0.2.0 in the homebrew menu; README status and known issues updated. Release zip
+  `sheroes-nx-v0.2.0-switch.zip` (same layout as 0.1.0) and `release_notes.md` in `out\release` on Mark's PC.
+
 ## 2026-11-01: stock-clock optimisation, step 2 (plain guest memory), no gain
 
 - NRO 0b8d36b: the lifted code built with -DRECOMP_MEM_VOLATILE= (NFSU2_GEN_PLAIN_MEM), the spin hint with a

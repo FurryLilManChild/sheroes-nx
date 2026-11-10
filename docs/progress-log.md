@@ -29,6 +29,11 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   [CDevice + 0x240C], ramp at CDevice + 0x1E04 + slot * 0x300) and the SDK's SetGammaRamp never wrote that memory,
   so the fade scaled a ramp of zeros. SetGammaRamp now mirrors its ramp into both slots, CreateDevice starts them
   at identity, and the first 24 SetGammaRamp calls are logged.
+- Fourth PC run: through the menus, team select, the movie and the stage's title card, then an access violation
+  while loading the stage: a read at 0xB01CD000, the first byte after a 0x2F0-byte block at 0xB01CCD10 in system
+  (pool) memory, 0x3B dwords to copy (ecx). On the console pool memory is plain RAM and such a read sees the next
+  block; here the page after the last block was not mapped. AllocSystem now commits one page past each block.
+  (The gamma fix worked: the menus showed.)
 
 ## 2026-11-09: branch xbe-recomp started
 

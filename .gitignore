@@ -1,101 +1,37 @@
-# Build artifacts
-build/
+# Nothing from the game, nothing built
+default.xbe
+*.xbe
+*.iso
+/game/assets/
+/game/generated/
+nvk_sdk/
+switch_sd/
+/build*/
 out/
-bin/
-*.obj
-*.o
-*.lib
-*.a
+*.nro
+*.nacp
+*.elf
+*.nso
 *.exe
 *.dll
 *.pdb
-*.ilk
-*.exp
-
-# CMake
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-
-# Visual Studio
-.vs/
-*.vcxproj
-*.vcxproj.filters
-*.vcxproj.user
-*.sln
-Debug/
-Release/
-x64/
-
-# Generated recompiled code (regenerate from XBE with the recomp pipeline)
-src/recomp/gen/
-
-# Game files (user must provide their own legally-owned copies)
-game/
-*.xbe
-*.iso
-*.xiso
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-Thumbs.db
-.DS_Store
-
-# Switch SD staging (contains game data)
-switch_sd/
-!xboxrecomp/tools/conformance/test.xbe
-
-# Build outputs and captures
-*.nro
-*.nacp
-*.wav
-*.raw
-__pycache__/
-*.pyc
-gen/
-
-# Per-game toolkit output (disassembly of the retail XBE)
-xboxrecomp/tools/*/output/
-
-# From upstream
-Burnout 3 Takedown/
-build-xr/
-saves/
-runs/
-*.bmp
+*.o
+*.a
+*.rlib
 *.log
-.claude/
-.mcp.json
+logs/
+screenshots/
+shadercache/
+!installer/release/shadercache/
+hdd/
 
-# sheroes-nx: game data and everything made from it stays on your own computer
-assets/*
-!assets/README.md
-out/
-*.dar
-*.xwb
-*.xmv
-*.cv2
+# the NRO icon carries the game's name (a trademark of its owners): kept local
+switch/icon.jpg
+
+# private working diary (local paths, test sessions)
+CLAUDE.local.md
+
+# sheroes-nx: the disc and anything made from it (never committed)
+/assets/
+/out/
 *_analysis.json
-# Sonic Heroes data formats
-*.one
-*.afs
-*.sfd
-*.adx
-*.txd
-*.dff
-*.bsp
-*.prs
-tools_tmp/
-
-# Renderer caches written next to the program on a run
-progcache.bin
-vkpipecache.bin
-vkpipes.bin
-vkspirv.bin

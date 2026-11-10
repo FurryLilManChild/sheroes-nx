@@ -11,6 +11,7 @@
 #include "app/app.h"
 #include "core/diag.h"
 #include "gpu/backend.h"
+#include "gpu/shaders.h"
 #include "gpu/texture.h"
 #include "gpu/vertex.h"
 #include "xdk/d3d8.h"
@@ -46,6 +47,10 @@ using namespace kernel;
 #ifndef SYM_D3DDevice_UpdateOverlay
 #define SYM_D3DDevice_UpdateOverlay FFFFFE05
 #define HAS_D3DDevice_UpdateOverlay 0
+#endif
+#ifndef SYM_D3DDevice_LoadVertexShaderProgram
+#define SYM_D3DDevice_LoadVertexShaderProgram FFFFFE06
+#define HAS_D3DDevice_LoadVertexShaderProgram 0
 #endif
 
 namespace d3d {
@@ -1161,12 +1166,86 @@ HLE_FASTCALL(D3DDevice_SetVertexShaderConstantNotInlineFast, 1) {
     return 0;
 }
 
-HLE_STDCALL(D3DDevice_LoadVertexShader, 2) {
-    LOG_FIRST(4, "d3d: LoadVertexShader %08X at %u is not supported", a[0], a[1]);
+// sheroes-nx: the vertex program memory. RenderWare's Xbox driver (Sonic Heroes 0x002BFB40) loads a program with
+// LoadVertexShaderProgram(program, 12) and runs it with SelectVertexShader(handle, 12) whenever its program changes;
+// the handles come from CreateVertexShader with a declaration and no function. The Xbox keeps 136 instructions of
+// program memory: Load* write into it, SelectVertexShader takes the handle's declaration and the program from the
+// slot up to the instruction with the final flag (dword 3, bit 0), as the NV2A runs it.
+namespace {
+constexpr uint32_t kVsSlots = 136;
+std::array<uint32_t, kVsSlots * 4> g_vs_mem{};
+std::unordered_map<uint64_t, std::shared_ptr<gpu::VertexShader>> g_vs_selected;  // by declaration and program
+uint32_t g_vs_loads = 0;
+
+void LoadProgram(const uint32_t* words, uint32_t count, uint32_t address) {
+    for (uint32_t i = 0; i < count && address + i < kVsSlots; i++) std::memcpy(&g_vs_mem[(address + i) * 4], words + i * 4, 16);
+    g_vs_loads++;
+}
+}  // namespace
+
+#if HAS_D3DDevice_LoadVertexShaderProgram
+// (function, address): the function as CreateVertexShader takes it, a header (type, count << 16) and the instructions
+HLE_STDCALL(D3DDevice_LoadVertexShaderProgram, 2) {
+    std::lock_guard<HleLock> lock(g_lock);
+    uint32_t f = a[0], n = R32(f) >> 16;
+    LOG_FIRST(8, "d3d: LoadVertexShaderProgram %08X, %u instructions at %u", f, n, a[1]);
+    LoadProgram(static_cast<const uint32_t*>(HostPtr(f + 4)), n, a[1]);
     return 0;
 }
+#endif
+
+HLE_STDCALL(D3DDevice_LoadVertexShader, 2) {
+    std::lock_guard<HleLock> lock(g_lock);
+    auto it = g_vs.find(a[0]);
+    if (it == g_vs.end() || it->second->program.empty()) {
+        LOG_FIRST(8, "d3d: LoadVertexShader %08X at %u: no program for that handle", a[0], a[1]);
+        return 0;
+    }
+    LoadProgram(it->second->program.data(), uint32_t(it->second->program.size() / 4), a[1]);
+    return 0;
+}
+
 HLE_STDCALL(D3DDevice_SelectVertexShader, 2) {
-    LOG_FIRST(4, "d3d: SelectVertexShader %08X at %u is not supported", a[0], a[1]);
+    std::lock_guard<HleLock> lock(g_lock);
+    Walk(Dev(kDevPush));  // queued vertices keep the shader they were given with
+    uint32_t h = a[0], address = a[1];
+    std::shared_ptr<gpu::VertexShader> decl;
+    if (h) {
+        auto it = g_vs.find(h);
+        if (it == g_vs.end()) {
+            LOG_FIRST(8, "d3d: SelectVertexShader with unknown handle %08X", h);
+            return 0;
+        }
+        decl = it->second;
+    } else if (g_state.vs) {
+        decl = g_state.vs;  // a null handle keeps the current declaration
+        h = g_state.vs_handle;
+    } else {
+        LOG_FIRST(8, "d3d: SelectVertexShader with no handle and no shader set");
+        return 0;
+    }
+    std::vector<uint32_t> program;
+    for (uint32_t i = address; i < kVsSlots; i++) {
+        program.insert(program.end(), &g_vs_mem[i * 4], &g_vs_mem[i * 4] + 4);
+        if (g_vs_mem[i * 4 + 3] & 1) break;
+    }
+    uint64_t key = gpu::Hash(program.data(), program.size() * 4, uint64_t(decl->handle) * 0x9E3779B97F4A7C15ull);
+    auto& vs = g_vs_selected[key];
+    if (!vs || vs->program != program || vs->decl != decl->decl) {
+        vs = std::make_shared<gpu::VertexShader>(*decl);
+        vs->program = std::move(program);
+        vs->program_type = 0x2078;
+        vs->hash = 0;
+        LOG_FIRST(32, "d3d: SelectVertexShader %08X at %u: %zu instructions (%zu programs so far)", h, address,
+                  vs->program.size() / 4, g_vs_selected.size());
+    }
+    XDK_REQUIRE("d3d", XDK_KEY(CDevice_VertexShader));
+    SetDev(XDK_CDevice_VertexShader + 4, h | 1);
+    TOUCH(g_state.vs_handle);
+    g_state.vs_handle = h | 1;
+    g_state.vs = vs;
+    for (auto& [reg, v] : decl->constants)
+        if (reg < 192) gpu::TouchVsc(g_state, reg), g_state.vsc[reg] = v;
     return 0;
 }
 HLE_STDCALL(D3DDevice_SetShaderConstantMode, 1) {

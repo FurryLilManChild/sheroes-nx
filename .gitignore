@@ -35,3 +35,4 @@ CLAUDE.local.md
 /assets/
 /out/
 *_analysis.json
+/nvk_sdk

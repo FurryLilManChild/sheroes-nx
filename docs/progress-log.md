@@ -24,3 +24,7 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   without touching hardware: GetGammaRamp 0x32AF30, GetDisplayFieldStatus 0x32C1D0, the resource creation, lock and
   surface level wrappers (0x335360, 0x3353F0, 0x338930-0x338AC0), the mode enumeration (0x338AD0, 0x338B70).
 - `tools/win/build_pc.ps1` (with main's `env.ps1`): the PC build with LLVM clang and the Visual Studio Build Tools.
+- Fixed-function vertex blending added to the SDK's shader (the characters' skinning).
+- `sdk/xdk/5659/signatures.toml` signed from this game.toml (134 of 239 functions; found again from scratch).
+- Cloud compile check of the Switch NRO (devkitA64 GCC, deko3d and NVK from /opt/nvk-sdk): builds, 353 steps,
+  26 minutes on 2 cores; the NRO is 36.5 MB (0.2.0's: 62 MB). Not sent: the PC boot comes first.

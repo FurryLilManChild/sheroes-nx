@@ -15,6 +15,13 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   and SetMaxDistance). All three named in game.toml and implemented in dsound.cpp (the listener's position and
   orientation; pitch as a frequency, 1/4096 octave from 48 kHz; cone angles accepted). The 19 unnamed D3D functions
   the game calls directly are listed in docs/feasibility-xbe-recomp.md; they only read or set up resources.
+- Second PC run: NOW LOADING on screen, then a guest trap at 1.76 s: "indirect call to 00323E20 has no recompiled
+  function" (return 0x002D4B45). This recompiler had begun that function at its padding (0x00323E17). Instead of
+  adding misses one at a time: the xboxrecomp port's disassembler (main, 22,690 functions) was run again, and every
+  function start it found that this recompiler did not became a `[functions]` seed when the image holds that
+  address as an aligned pointer in .rdata/.data (1,848) or loads it as an immediate (731), plus main's hand seeds
+  (20); one that begins inside an instruction here dropped. 23,845 functions now (21,366 before); overlapping
+  decodes 263 (79 before). All 64 files compile in the cloud.
 
 ## 2026-11-09: branch xbe-recomp started
 

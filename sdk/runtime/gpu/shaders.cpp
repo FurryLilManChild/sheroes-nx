@@ -54,6 +54,9 @@ const char* kCommonTail = R"(    float4 spread[4];
     float4 mat[5];
     float4 amb;
     float4 lt[56];
+    float4x4 wvb[3];
+    float4x4 wvnb[3];
+    float4x4 pv;
 };
 )";
 
@@ -680,6 +683,8 @@ std::string VertexProgramHlsl(const std::vector<uint32_t>& prog, uint16_t regs, 
 
 FixedKey MakeFixedKey(const State& s) {
     FixedKey f;
+    // sheroes-nx: Sonic Heroes skins its characters with the fixed function (RenderWare's Xbox skinning)
+    f.blend = s.rs[kRsVertexBlend] <= 6 ? s.rs[kRsVertexBlend] : 0;
     if (s.rs[kRsLighting]) {
         f.light = 1 | (s.rs[kRsSpecularEnable] ? 2 : 0) | (s.rs[kRsLocalViewer] ? 4 : 0) | (s.rs[kRsNormalizeNormals] ? 8 : 0);
         if (s.rs[kRsColorVertex])
@@ -719,9 +724,26 @@ std::string FixedVertexHlsl(uint16_t regs, bool pretransformed, uint64_t decode,
         s += "    oPos = float4(rhw.xy, rhw.z / surf.z, w);\n";
     } else {
         s += "    float4 ip = float4(" + v(0, "float4(0,0,0,1)") + ".xyz, 1);\n";
-        s += "    float4 cp = mul(ip, wvp);\n";
-        s += "    float3 vp = mul(ip, wv).xyz;\n";
-        s += "    float3 vn = mul(float4(" + v(2, "float4(0,0,0,0)") + ".xyz, 0), wvn).xyz;\n";
+        if (f.blend) {
+            // sheroes-nx: vertex blending as the NV2A's skin modes: 1, 3, 5 blend 2, 3, 4 matrices with the last weight
+            // 1 minus the others, 2, 4, 6 blend 2, 3, 4 with every weight from the vertex (register 1)
+            int count = int(f.blend + 3) / 2;
+            bool rest_last = f.blend & 1;
+            s += "    float4 bw = " + v(1, "float4(0,0,0,0)") + ";\n";
+            s += "    float3 nin = " + v(2, "float4(0,0,0,0)") + ".xyz;\n";
+            s += "    float3 vp = 0, vn = 0;\n    float rest = 1;\n";
+            for (int i = 0; i < count; i++) {
+                std::string m = i ? F("wvb[%d]", i - 1) : "wv", n = i ? F("wvnb[%d]", i - 1) : "wvn";
+                std::string w = rest_last && i == count - 1 ? "rest" : F("bw[%d]", i);
+                s += F("    { float w = %s; rest -= w; vp += mul(ip, %s).xyz * w; vn += mul(float4(nin, 0), %s).xyz * w; }\n",
+                       w.c_str(), m.c_str(), n.c_str());
+            }
+            s += "    float4 cp = mul(float4(vp, 1), pv);\n";
+        } else {
+            s += "    float4 cp = mul(ip, wvp);\n";
+            s += "    float3 vp = mul(ip, wv).xyz;\n";
+            s += "    float3 vn = mul(float4(" + v(2, "float4(0,0,0,0)") + ".xyz, 0), wvn).xyz;\n";
+        }
         if (f.light & 8) s += "    vn = dot(vn, vn) > 0 ? normalize(vn) : vn;\n";
     }
     if (lit) {

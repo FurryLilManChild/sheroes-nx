@@ -49,6 +49,7 @@ struct FixedKey {
                            // diffuse, specular, ambient, emissive (material when the vertex lacks that colour)
     uint32_t types = 0;    // D3DLIGHTTYPE per light, 2 bits each, 0 off
     uint32_t tex[4] = {};  // per stage: coordinate set, texgen at bit 4, D3DTTFF count at bit 8, projected bit 11, set size at bit 12
+    uint32_t blend = 0;    // sheroes-nx: D3DRS_VERTEXBLEND, 1 to 6 (the NV2A's skin modes), 0 off
 };
 FixedKey MakeFixedKey(const State& s);
 std::string FixedVertexHlsl(uint16_t regs, bool pretransformed, uint64_t decode = 0, const FixedKey& f = {});
@@ -97,6 +98,11 @@ struct DrawConstants {
     float mat[5][4];     // material diffuse, ambient, specular, emissive, power
     float amb[4];        // D3DRS_AMBIENT
     float lt[8][7][4];   // per light: diffuse, specular, ambient, position range, direction falloff, attenuation, cos theta/2 phi/2
+    // sheroes-nx: vertex blending (D3DRS_VERTEXBLEND): world 1 to 3 times view, their normal matrices, and view
+    // space to the target (projection times viewport), since a blended position is made in view space
+    float wvb[3][16];
+    float wvnb[3][16];
+    float pv[16];
 };
 
 // BREXTREME: what a draw's shaders read of DrawConstants: without the fixed function transform only the fields

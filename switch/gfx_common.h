@@ -470,6 +470,17 @@ void FillTransformConstants(const State& s, GuestExtent size, DrawConstants& c) 
     InverseTranspose3x3(wv, n);
     Transpose(n, c.wvn);
     for (int t = 0; t < 4; t++) Transpose(s.transforms[kTsTexture0 + size_t(t)].data(), c.tm[t]);
+    // sheroes-nx: the other world matrices for vertex blending, and view space to the target
+    for (size_t k = 1; k < 4; k++) {
+        float wk[16], nk[16] = {};
+        MatMul(s.transforms[kTsWorld + k].data(), s.transforms[kTsView].data(), wk);
+        Transpose(wk, c.wvb[k - 1]);
+        InverseTranspose3x3(wk, nk);
+        Transpose(nk, c.wvnb[k - 1]);
+    }
+    float pvm[16];
+    MatMul(s.transforms[kTsProjection].data(), vpm, pvm);
+    Transpose(pvm, c.pv);
 }
 
 void LightToView(const std::array<uint32_t, 26>& l, const float* vm, float (&o)[7][4]) {

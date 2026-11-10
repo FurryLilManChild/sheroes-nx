@@ -48,6 +48,7 @@ using namespace kernel;
 #define SYM_D3DDevice_UpdateOverlay FFFFFE05
 #define HAS_D3DDevice_UpdateOverlay 0
 #endif
+void MirrorGamma(const uint8_t* ramp);  // sheroes-nx, below
 #ifndef SYM_D3DDevice_LoadVertexShaderProgram
 #define SYM_D3DDevice_LoadVertexShaderProgram FFFFFE06
 #define HAS_D3DDevice_LoadVertexShaderProgram 0
@@ -345,6 +346,12 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     LOGR("d3d: CreateDevice %ux%u format %X buffers %u depth %u format %X interval %X flags %X swap effect %u", w, h,
          fmt, count, auto_depth, depth_fmt, interval, R32(pp + 0x28), R32(pp + 0x14));
     std::memset(HostPtr(kDevice), 0, XDK_CDevice_Size);
+    {
+        // sheroes-nx: the console's CreateDevice starts with the identity ramp (see MirrorGamma)
+        uint8_t identity[768];
+        for (int i = 0; i < 768; i++) identity[i] = uint8_t(i & 0xFF);
+        MirrorGamma(identity);
+    }
     W32(kDevicePtr, kDevice);
     ScratchPush();
 
@@ -645,9 +652,22 @@ HLE_STDCALL(D3DDevice_PersistDisplay, 0) {
 }
 HLE_STDCALL(D3DDevice_FlushVertexCache, 0) { return 0; }
 
+// sheroes-nx: the ramp is also kept where the console keeps it, both slots of the device's pair (CDevice_GammaRamps,
+// 0x300 bytes each), so the console's own D3DDevice_GetGammaRamp reads it back. Sonic Heroes fades by reading the
+// current ramp (GetGammaRamp 0x0032AF30, not replaced: it reads [CDevice + 0x240C] for the slot and copies from
+// CDevice + 0x1E04 + slot * 0x300) and scaling it; with that memory left at zero the screen stayed black after the
+// title screen while the menu drew normally (PC frame capture 2026-11-10)
+void MirrorGamma(const uint8_t* ramp) {
+    if (XDK_CDevice_GammaRamps == xdk::kUnknown) return;
+    for (uint32_t i = 0; i < 2; i++) std::memcpy(HostPtr(kDevice + XDK_CDevice_GammaRamps + i * 0x300), ramp, 768);
+}
+
 HLE_STDCALL(D3DDevice_SetGammaRamp, 2) {
     uint8_t ramp[768];
     std::memcpy(ramp, HostPtr(a[1]), 768);
+    MirrorGamma(ramp);
+    LOG_FIRST(24, "d3d: SetGammaRamp flags %X: red %u %u %u, green %u %u %u, blue %u %u %u", a[0], ramp[0], ramp[128],
+              ramp[255], ramp[256], ramp[384], ramp[511], ramp[512], ramp[640], ramp[767]);
     if (g_backend) g_backend->SetGamma(ramp);
     return 0;
 }

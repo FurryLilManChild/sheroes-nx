@@ -22,6 +22,13 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   address as an aligned pointer in .rdata/.data (1,848) or loads it as an immediate (731), plus main's hand seeds
   (20); one that begins inside an instruction here dropped. 23,845 functions now (21,366 before); overlapping
   decodes 263 (79 before). All 64 files compile in the cloud.
+- Third PC run: the title screen at 60 fps; after Start a black screen with the music playing. A D3D12 frame capture
+  (F3, XBE_CAPTURE_DIR) shows the frame drawn right in the game's target (the "There is no Game Data" prompt, 169
+  draws), so the picture was lost on the way to the window. Likely cause (to be confirmed by the next log): the
+  game fades by reading the current gamma ramp with D3DDevice_GetGammaRamp (0x0032AF30, the console's code: slot at
+  [CDevice + 0x240C], ramp at CDevice + 0x1E04 + slot * 0x300) and the SDK's SetGammaRamp never wrote that memory,
+  so the fade scaled a ramp of zeros. SetGammaRamp now mirrors its ramp into both slots, CreateDevice starts them
+  at identity, and the first 24 SetGammaRamp calls are logged.
 
 ## 2026-11-09: branch xbe-recomp started
 

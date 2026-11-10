@@ -28,3 +28,16 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
 - `sdk/xdk/5659/signatures.toml` signed from this game.toml (134 of 239 functions; found again from scratch).
 - Cloud compile check of the Switch NRO (devkitA64 GCC, deko3d and NVK from /opt/nvk-sdk): builds, 353 steps,
   26 minutes on 2 cores; the NRO is 36.5 MB (0.2.0's: 62 MB). Not sent: the PC boot comes first.
+
+## 2026-11-10: first PC boot
+
+- Mark's first PC run (SHEROES-vk.exe): the game found the ISO, created the device 640x480, Vulkan and audio
+  started, then an access violation at 2.7 s: guest write to 0x00000038 inside 0x003408EE, called from 0x0026B12A
+  with a 0x40-byte DS3DLISTENER. 0x003408EE is IDirectSound_SetAllParameters (the XDK order: after
+  CreateSoundBuffer, before SetDistanceFactor), which the SDK did not know, so the console code ran on the host's
+  DirectSound object.
+- A scan of every direct call from game code into DSOUND found two more unnamed: 0x0033F2D8
+  IDirectSoundBuffer_SetPitch (after SetVolume) and 0x0033FAA6 IDirectSoundBuffer_SetConeAngles (between SetMixBins
+  and SetMaxDistance). All three named in game.toml and implemented in dsound.cpp (the listener's position and
+  orientation; pitch as a frequency, 1/4096 octave from 48 kHz; cone angles accepted). The 19 unnamed D3D functions
+  the game calls directly are listed in docs/feasibility-xbe-recomp.md; they only read or set up resources.

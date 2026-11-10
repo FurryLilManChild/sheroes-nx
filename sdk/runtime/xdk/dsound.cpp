@@ -47,6 +47,19 @@ X86Func* Find(uint32_t guest);
 #define SYM_IDirectSoundBuffer_SetPlayRegion FFFFFF05
 #define HAS_IDirectSoundBuffer_SetPlayRegion 0
 #endif
+// sheroes-nx: three more that Sonic Heroes calls (named by hand in game.toml; XDK 5659 has no signatures for them)
+#ifndef SYM_IDirectSound_SetAllParameters
+#define SYM_IDirectSound_SetAllParameters FFFFFF0F
+#define HAS_IDirectSound_SetAllParameters 0
+#endif
+#ifndef SYM_IDirectSoundBuffer_SetPitch
+#define SYM_IDirectSoundBuffer_SetPitch FFFFFF10
+#define HAS_IDirectSoundBuffer_SetPitch 0
+#endif
+#ifndef SYM_IDirectSoundBuffer_SetConeAngles
+#define SYM_IDirectSoundBuffer_SetConeAngles FFFFFF11
+#define HAS_IDirectSoundBuffer_SetConeAngles 0
+#endif
 #ifndef SYM_IDirectSoundBuffer_SetAllParameters
 #define SYM_IDirectSoundBuffer_SetAllParameters FFFFFF06
 #define HAS_IDirectSoundBuffer_SetAllParameters 0
@@ -480,6 +493,7 @@ static void AuditExports() {
         SYM(IDirectSound_SetPosition), SYM(IDirectSound_SetOrientation), SYM(IDirectSound_SynchPlayback), SYM(DirectSoundDoWork),
         SYM(IDirectSound_DownloadEffectsImage), SYM(IDirectSound_GetEffectData), SYM(IDirectSound_CommitEffectData),
         SYM(IDirectSound_GetOutputLevels), SYM(IDirectSoundBuffer_SetPlayRegion), SYM(IDirectSoundBuffer_SetAllParameters),
+        SYM(IDirectSound_SetAllParameters), SYM(IDirectSoundBuffer_SetPitch), SYM(IDirectSoundBuffer_SetConeAngles),
         SYM(IDirectSoundBuffer_SetFormat), SYM(IDirectSoundBuffer_SetOutputBuffer), SYM(IDirectSoundBuffer_SetRolloffCurve),
         SYM(IDirectSoundBuffer_StopEx),
         SYM(XAudioDownloadEffectsImage), SYM(DirectSoundCreateBuffer), SYM(IDirectSound_CreateSoundBuffer),
@@ -556,6 +570,18 @@ HLE_STDCALL(IDirectSound_SetOrientation, 8) {
     for (int i = 0; i < 3; i++) {
         g_front[i] = F32(a[1 + i]);
         g_top[i] = F32(a[4 + i]);
+    }
+    return 0;
+}
+// sheroes-nx: (this, DS3DLISTENER, apply): position at +4, front at +0x28, top at +0x34 (Sonic Heroes 0x0026B12A
+// sets the listener this way at startup; the console code crashed on the host's DirectSound object)
+HLE_STDCALL(IDirectSound_SetAllParameters, 3) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    if (!a[1]) return 0;
+    for (int i = 0; i < 3; i++) {
+        g_listener[i] = F32(R32(a[1] + 4 + i * 4));
+        g_front[i] = F32(R32(a[1] + 0x28 + i * 4));
+        g_top[i] = F32(R32(a[1] + 0x34 + i * 4));
     }
     return 0;
 }
@@ -745,6 +771,12 @@ BUFFER(SetFrequency, 2) {
     v.freq = a[1];
     return 0;
 }
+// sheroes-nx: the Xbox's pitch is in 1/4096 octaves from 48 kHz (DSBPITCH); as a frequency, as SetFrequency stores it
+BUFFER(SetPitch, 2) {
+    v.freq = uint32_t(48000.0 * std::exp2(double(int32_t(a[1])) / 4096.0) + 0.5);
+    return 0;
+}
+BUFFER(SetConeAngles, 4) { return 0; }  // cones are not mixed (as SetVelocity)
 BUFFER(SetEG, 2) {
     LOG_FIRST(1, "audio: buffer SetEG accepted; hardware envelope playback remains unsupported");
     return 0;

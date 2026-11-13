@@ -1279,7 +1279,14 @@ HLE_STDCALL(D3DDevice_CreatePixelShader, 2) {
     std::lock_guard<HleLock> lock(g_lock);
     auto ps = std::make_shared<gpu::PixelShader>();
     std::memcpy(ps->def, HostPtr(a[0]), sizeof(ps->def));
-    uint32_t rec = mem::AllocSystem(16, 16);
+    // sheroes-nx: the object laid out like the XDK's (5659: CreatePixelShader 0x3377E0 allocates 0xFC bytes: refcount
+    // 1 at +0, 1 at +4, +8 points at the definition copied to +0xC). RenderWare learns that layout by scanning the
+    // object for its definition (0x2908C0, called from 0x2E13FF while loading a stage) and read past a 16-byte record
+    uint32_t rec = mem::AllocSystem(0xFC, 16);
+    W32(rec + 0, 1);
+    W32(rec + 4, 1);
+    W32(rec + 8, rec + 0xC);
+    std::memcpy(HostPtr(rec + 0xC), ps->def, sizeof(ps->def));
     ps->handle = rec;
     g_ps[rec] = ps;
     W32(a[1], rec);

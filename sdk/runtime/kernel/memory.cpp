@@ -433,10 +433,7 @@ uint32_t AllocSystem(uint32_t size, uint32_t align) {
     if (!size) size = 16;
     uint32_t a = g_system.Alloc(size, std::max<uint32_t>(align, 16), kSystemBase, kSystemBase + kSystemSize - 1, false);
     if (!a) return 0;
-    // sheroes-nx: one page past the block committed too. On the console pool memory is plain RAM and a read past a
-    // block's end sees its neighbour; here the page after the last block was not mapped. Sonic Heroes read 0x3B
-    // dwords from the end of a 0x2F0-byte block (0xB01CCD10) while loading the first stage (PC, 2026-11-10)
-    Commit(a, std::min<uint32_t>(size + kPage, kSystemBase + kSystemSize - a));
+    Commit(a, size);
     std::memset(g_base + a, 0, size);
     return a;
 }

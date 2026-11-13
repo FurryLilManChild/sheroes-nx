@@ -34,6 +34,13 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   (pool) memory, 0x3B dwords to copy (ecx). On the console pool memory is plain RAM and such a read sees the next
   block; here the page after the last block was not mapped. AllocSystem now commits one page past each block.
   (The gamma fix worked: the menus showed.)
+- Fifth PC run (2026-11-13): the same crash one page further on (read 0xB01CE000, ecx 0x3B again), so the page
+  slack was the wrong conclusion and is taken out again. The real cause: RenderWare learns the XDK's pixel shader
+  object layout at stage load (0x2908C0, called from 0x2E13FF): it creates a pixel shader from a 0xF0-byte
+  definition at 0x3D0498, then scans the object for a copy of that definition (repe cmpsd, 0x3C dwords) and for a
+  pointer to it. The console's CreatePixelShader (0x3377E0) allocates 0xFC bytes: refcount 1 at +0, 1 at +4, a
+  pointer at +8 to the definition copied to +0xC. The SDK's record was 16 empty bytes, so the scan ran off the end
+  of pool memory. CreatePixelShader now lays its record out the same way.
 
 ## 2026-11-09: branch xbe-recomp started
 

@@ -49,7 +49,7 @@ static bool NxBack(uint32_t va, uint32_t size) {
         uint64_t run = g;
         while (run < end && !g_nx_backed[size_t(run / kNxGranule)]) run += kNxGranule;
         size_t len = size_t(run - g);
-        LOGI("memory: backing %08X+%X", uint32_t(g), uint32_t(len));
+        LOGW("memory: backing %08X+%X", uint32_t(g), uint32_t(len));
         void* src = memalign(0x1000, len);
         Handle h = 0;
         Result rc = src ? svcCreateCodeMemory(&h, src, len) : MAKERESULT(Module_Libnx, LibnxError_OutOfMemory);
@@ -77,6 +77,17 @@ bool Init() {
     virtmemUnlock();
     g_base = static_cast<uint8_t*>(at);
     if (g_base && !NxBack(kContiguousBase, kPhysicalSize)) g_base = nullptr;
+    // sheroes-nx: the guest's busy ranges backed up front, one code memory object each. Horizon has few code memory
+    // objects for the whole system (10 in Atmosphere's slab counts), so backing every committed range on demand
+    // ran out: Sonic Heroes on the Switch, 2026-11-13, "backing 01700000+400000 failed (0xCE01)" (kernel 103,
+    // out of resource) at 10.6 s, the game's own heap at 0x013C0000. Ranges outside these still back on demand.
+    static const uint32_t kArenas[][2] = {
+        {0x00000000, 0x08000000},  // the XBE image and the game's heaps (the Xbox has 64 MB in all)
+        {kSystemBase, 0x04000000},  // pool and system memory
+        {kStackBase, 0x02000000},   // thread stacks
+    };
+    for (auto& r : kArenas)
+        if (g_base && !NxBack(r[0], r[1])) g_base = nullptr;
 #elif defined(_WIN32)
     HANDLE ram = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, kPhysicalSize, nullptr);
     // a fixed base keeps crash dumps comparable between runs

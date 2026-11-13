@@ -44,6 +44,13 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
 - Sixth PC run (2026-11-13): into the first stage, played the first part. Log: 58 to 60 fps in the stage (one 53.6
   window during loading), about 380 draws a frame, the title thread 0.7 ms to record and the render thread 3 ms a
   frame on the Legion Go. A few single long frames (60 to 130 ms, one 634 ms) while streaming; clean exit.
+- First Switch run (2026-11-13, deko3d, stock clocks, full memory): crash at 10.6 s, just after NOW LOADING:
+  "memory: backing 01700000+400000 failed (0xCE01)", then a guest write to the unbacked 0x01700000. 0xCE01 is kernel
+  result 103 (out of resource). Guest memory on the Switch is heap blocks shown at their guest address as code
+  memory, one code memory object per range backed on demand, and Horizon keeps very few of those for the whole
+  system (10 in Atmosphere's slab counts). The busy ranges are now backed up front, one object each: 0x00000000+128
+  MB (image and heaps), the pool at 0xB0000000+64 MB, the stacks at 0xD0000000+32 MB. Backing on demand now logs a
+  warning, to see if anything still needs it.
 
 ## 2026-11-09: branch xbe-recomp started
 

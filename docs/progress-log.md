@@ -41,6 +41,9 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   pointer to it. The console's CreatePixelShader (0x3377E0) allocates 0xFC bytes: refcount 1 at +0, 1 at +4, a
   pointer at +8 to the definition copied to +0xC. The SDK's record was 16 empty bytes, so the scan ran off the end
   of pool memory. CreatePixelShader now lays its record out the same way.
+- Sixth PC run (2026-11-13): into the first stage, played the first part. Log: 58 to 60 fps in the stage (one 53.6
+  window during loading), about 380 draws a frame, the title thread 0.7 ms to record and the render thread 3 ms a
+  frame on the Legion Go. A few single long frames (60 to 130 ms, one 634 ms) while streaming; clean exit.
 
 ## 2026-11-09: branch xbe-recomp started
 

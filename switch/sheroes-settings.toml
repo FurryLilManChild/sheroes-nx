@@ -6,7 +6,7 @@
 # Internal resolution in % of the screen's height (100 = native). Lower it (75, say) if the game is slow.
 render_percent = 100
 
-# Frame rate cap (0 = none). 60 by default (street-nx's tested setup; not yet measured on this title).
+# Frame rate cap (0 = none). 60 by default.
 # The log writes the real frame rate every 10 s ("perf:" lines).
 fps_cap = 60
 
@@ -64,7 +64,8 @@ buttons_by_name = false
 # Clocks in MHz (0 = the console's own, untouched). Applied at start and when docking or undocking, and the console's
 # are restored on exit. Caps: CPU 1785, GPU 921, memory 1600 (the official maximums).
 # Stock: CPU 1020; GPU 307-460 handheld and 768 docked; memory 1331 handheld and 1600 docked.
-# Higher clocks use more battery and run hotter. Not yet measured on this title.
+# Higher clocks use more battery and run hotter. Sonic Heroes runs at 60 fps at stock clocks: the port menu's CPU
+# boost is there for any part that does not.
 # If you use Horizon OC or sys-clk, leave these at 0 and set the clocks in its profile for this game.
 cpu_mhz = 0
 gpu_mhz = 0
@@ -85,3 +86,17 @@ render_spin_us = 0
 # true (default): shows the FPS and the resolution in Status Monitor Overlay / Horizon OC Monitor, and follows the
 # handheld/docked mode picked in ReverseNX-RT. Needs SaltyNX 0.7.0 or later; without SaltyNX it does nothing.
 saltynx = true
+
+# The port menu's settings (+ and - together open the menu, which changes and saves these):
+# button_map: 0 = as buttons_by_name; otherwise the menu's own map of the buttons.
+button_map = 0
+# The camera (right stick), left/right and up/down.
+invert_camera_x = false
+invert_camera_y = false
+# Steering on the left stick's left/right: 0 = linear, 1 = gentle, 2 = gentler (finer slight turns).
+stick_response = 0
+# The frame rate in the top left corner.
+fps_counter = false
+# Volumes in %: music (stereo sounds) and effects (mono sounds: effects and voices).
+music_volume = 100
+effects_volume = 100

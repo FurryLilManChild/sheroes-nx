@@ -1,3 +1,17 @@
+Sonic Heroes - Nintendo Switch homebrew port (sheroes-nx), branch xbe-recomp
+
+sheroes.nro contains code translated from the game's default.xbe by the recompiler. It contains none of the game's
+data files: the player copies them from their own disc. Sonic Heroes is (c) SEGA; this project has no relation to
+SEGA, Sonic Team, Microsoft or Nintendo.
+
+sheroes-nx (this branch) is built on brextreme-nx (the Bloody Roar Extreme port, https://github.com/xsaja/brextreme-nx,
+GPL-3.0), whose notice follows unchanged. sheroes-nx's own code is licensed under the GNU General Public License
+version 3 (LICENSE), as brextreme-nx's is. Also carried: switch/font8x8.h, from dhepper/font8x8 (Daniel Hepper, after
+Marcel Sondaar and IBM's VGA fonts), public domain.
+
+
+==================== brextreme-nx's notice ====================
+
 Bloody Roar Extreme - Nintendo Switch homebrew port (brextreme-nx)
 
 brextreme.nro contains code translated from the game's default.xbe by the recompiler. It contains none of the game's

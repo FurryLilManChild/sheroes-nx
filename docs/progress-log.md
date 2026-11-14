@@ -3,6 +3,15 @@
 The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md`. Upstream's is in
 `docs/brextreme/progress-log.md`.
 
+## 2026-11-14: 0.5.0
+
+- Eighth Switch run: the extracted disc folder with game files opened at their first read (at most 48 open):
+  menus and team select fine, mostly 60 fps with a few hitches when new areas load (Mark: "worked pretty well").
+- Mark's choice: the disc image is the recommended setup; a disc image in the game folder is now used before the
+  extracted files. The extracted folder stays supported (for cards that cannot hold a file over 4 GB).
+- Version 0.5.0 (pre-release, Switch): 60 fps at stock clocks in the first stage, the port menu, graphics and sound
+  fixed. Mark's numbering: 0.5 is feature ready, not yet played through. README and LICENSES.txt updated.
+
 ## 2026-11-10: first PC boot
 
 - Mark's first PC run (SHEROES-vk.exe): the game found the ISO, created the device 640x480, Vulkan and audio

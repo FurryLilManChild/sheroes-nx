@@ -144,7 +144,7 @@ if(HAVE_GEN)
         -Wl,--end-group)
 
     nx_generate_nacp(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/sheroes.nacp
-        NAME "Sonic Heroes (Xbox recomp)" AUTHOR "FurryLilManChild" VERSION "0.3.0")
+        NAME "Sonic Heroes (Xbox recomp)" AUTHOR "FurryLilManChild" VERSION "0.5.0")
     set(ICON ${HOST}/icon.jpg)
     if(EXISTS ${ICON})
         nx_create_nro(sheroes NACP ${CMAKE_CURRENT_BINARY_DIR}/sheroes.nacp ICON ${ICON})

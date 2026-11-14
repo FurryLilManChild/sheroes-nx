@@ -100,8 +100,9 @@ void CheckImage(const kernel::Disc& disc, const fs::path& iso) {
 
 }  // namespace
 
-// the extracted files before any image, the first copy with the title ID wins; false when there is none (main.cpp
-// tells the player)
+// sheroes-nx: a disc image before the extracted files (one file on the card opens and reads faster than ~3,900;
+// Mark, 2026-11-14: the ISO is the recommended setup), the first copy with the title ID wins; false when there is
+// none (main.cpp tells the player)
 bool FindGame(GameFiles& game) {
     auto consider = [&](const fs::path& assets, const fs::path& name, std::vector<uint8_t> xbe,
                         std::unique_ptr<kernel::Disc> disc) {
@@ -120,7 +121,6 @@ bool FindGame(GameFiles& game) {
     for (const fs::path& assets : AssetFolders()) {
         if (!fs::is_directory(assets, ec)) continue;
         std::vector<uint8_t> xbe;
-        if (ReadHostFile(assets / IMAGE_XBE, xbe) && consider(assets, assets, std::move(xbe), nullptr)) return true;
         std::vector<fs::path> isos;
         for (auto& e : fs::directory_iterator(assets, ec)) {
             std::string ext = e.path().extension().string();
@@ -142,6 +142,8 @@ bool FindGame(GameFiles& game) {
             CheckImage(*disc, iso);
             if (consider(assets, iso, std::move(xbe), std::move(disc))) return true;
         }
+        xbe.clear();
+        if (ReadHostFile(assets / IMAGE_XBE, xbe) && consider(assets, assets, std::move(xbe), nullptr)) return true;
     }
     LOGE("game: no %s with title %08X in %s", IMAGE_XBE, kTitleId, (ExeDir() / "game").string().c_str());
     return false;

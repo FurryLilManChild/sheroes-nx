@@ -323,6 +323,8 @@ void Render(float* out, uint32_t frames) {
     }
     // sheroes-nx diagnostic (Mark, 2026-11-13: the effects far too loud, the Switch at half volume): what each voice
     // adds to the mix, and how hard the mix hits full scale, reported every 10 s (MixReport)
+    // off since it found the 3D pan fault (2026-11-13): the report's work runs in the mixer, on the sound thread
+    constexpr bool kMixReport = false;
     struct VoiceEnergy {
         double energy = 0, peak_gain = 0;
         uint64_t frames = 0;
@@ -415,7 +417,7 @@ void Render(float* out, uint32_t frames) {
             v_frames++;
             v.pos += step;
         }
-        if (v_frames) {
+        if (v_frames && kMixReport) {
             voices_now++;
             VoiceEnergy& ve = energy[obj];
             ve.energy += v_energy;
@@ -436,6 +438,7 @@ void Render(float* out, uint32_t frames) {
         }
     }
     voice_max = std::max(voice_max, voices_now);
+    if (kMixReport) {
     for (uint32_t i = 0; i < frames * 2; i++) {
         float x = std::fabs(out[i]);
         mix_energy += double(x) * x;
@@ -461,6 +464,7 @@ void Render(float* out, uint32_t frames) {
         energy.clear();
         mix_energy = mix_peak = 0;
         mix_samples = mix_clipped = voice_max = 0;
+    }
     }
     for (uint32_t i = 0; i < frames * 2; i++) out[i] = std::clamp(out[i], -1.0f, 1.0f);
 }

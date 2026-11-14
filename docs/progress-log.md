@@ -76,6 +76,10 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   buffer at [0x611E40], 0x2C5796). The Switch build defaulted to draw_copy = false (the render thread reads the
   vertices from the game's memory when it draws), the PC to true; the particles' buffer is rewritten before the
   render thread gets to it. draw_copy is now true on the Switch too (the title thread is under 1 ms a frame).
+- Sixth Switch run (2026-11-14): spray, sound and textures all right (Mark). Stock clocks no longer held 60 deeper
+  into the stage: 33 to 60 fps, the render thread 12 to 25 ms a frame, of which "assemble" 4 to 15 ms (0.3 to 0.5
+  ms in the runs before). That was the draw census itself: text formatting for every draw on the render thread.
+  The census and the mix report are switched off in the code (kDrawCensus, kMixReport). With CPU boost Mark had 60.
 
 ## 2026-11-09: branch xbe-recomp started
 

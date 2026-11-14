@@ -547,6 +547,7 @@ bool DrawStreamSpans(const State& s, uint32_t prim, uint32_t start, uint32_t cou
 // function or a vertex program, and three sample vertices (for fixed function and XYZRHW draws, where they land on
 // the screen too). Then, while running, the draws whose sample vertices land far outside the screen or behind the
 // camera, counted by kind and reported every 10 s with the worst one: the lines across the screen should be there
+constexpr bool kDrawCensus = false;
 void CensusDraw(const State& s, const VertexShader& layout, const DrawRange& d, bool raw) {
     const auto& pos = layout.inputs[0];
     if (pos.stream < 0 || !pos.type || pos.type == kTypeNone || !s.streams[size_t(pos.stream)].vb) return;
@@ -663,7 +664,9 @@ bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, con
 
     // the guest's own vertices when the input assembler can read every element of them
     bool raw = kRawVertices && RawReadable(s, inputs);
-    CensusDraw(s, *layout, d, raw);
+    // sheroes-nx: the draw census (CensusDraw above) found the sea spray's bad vertices on 2026-11-13; off since, as
+    // its text formatting for every draw cost the render thread 5 to 15 ms a frame (Switch, 2026-11-14)
+    if (kDrawCensus) CensusDraw(s, *layout, d, raw);
     if (raw) return AssembleRaw(s, inputs, d, out);
     return AssembleConverted(s, inputs, d, out);
 }

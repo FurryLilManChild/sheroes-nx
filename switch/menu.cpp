@@ -24,7 +24,7 @@
 namespace sheroes {
 extern uint32_t g_button_map;   // 0: by buttons_by_name; else 8 nibbles, each a Switch button slot + 1
 extern bool g_invert_x, g_invert_y, g_fps_counter;
-extern uint32_t g_stick_response;  // left stick: 0 linear, 1 gentle, 2 gentler
+extern uint32_t g_stick_response;  // left stick left/right: 0 linear, 1 gentle, 2 gentler
 }
 namespace xdk {
 extern uint32_t g_music_pct, g_effects_pct;  // dsound.cpp
@@ -141,9 +141,9 @@ void RowText(int r, const char*& label, char* val, size_t vn, const char*& note)
             break;
         case R_STICK: {
             static const char* const kNames[3] = {"Linear", "Gentle", "Gentler"};
-            label = "Stick response";
+            label = "Steering response";
             std::snprintf(val, vn, "%s", kNames[std::min<uint32_t>(sheroes::g_stick_response, 2)]);
-            note = "Left stick: less input for small pushes";
+            note = "Finer slight left and right turns";
             break;
         }
         case R_CONTROLLERS:
@@ -404,14 +404,12 @@ void OnPad(int port, input::Pad& p) {
             return;
         }
     }
-    // the left stick's response curve, along its direction: a full push stays full, small pushes give less
+    // steering: a curve on the left stick's left/right only, so a slight sideways push while running gives a smaller
+    // turn; up/down and a full sideways push are unchanged (Mark: slight left and right at full speed too twitchy)
     if (uint32_t curve = std::min<uint32_t>(sheroes::g_stick_response, 2)) {
-        float x = p.lx / 32767.0f, y = p.ly / 32767.0f, m = std::sqrt(x * x + y * y);
-        if (m > 1e-4f) {
-            float k = std::pow(std::min(m, 1.0f), curve == 1 ? 1.5f : 2.0f) / m;
-            p.lx = int16_t(std::clamp(x * k * 32767.0f, -32767.0f, 32767.0f));
-            p.ly = int16_t(std::clamp(y * k * 32767.0f, -32767.0f, 32767.0f));
-        }
+        float x = std::clamp(p.lx / 32767.0f, -1.0f, 1.0f);
+        x = std::copysign(std::pow(std::fabs(x), curve == 1 ? 1.5f : 2.0f), x);
+        p.lx = int16_t(x * 32767.0f);
     }
     if (sheroes::g_invert_x) p.rx = int16_t(p.rx == -32768 ? 32767 : -p.rx);
     if (sheroes::g_invert_y) p.ry = int16_t(p.ry == -32768 ? 32767 : -p.ry);

@@ -143,7 +143,12 @@ Settings DefaultSettings() {
     s.aniso = 2;  // the ground and walls seen at an angle stay sharp further away; almost free on the GPU
     // the vertices read by the render thread from the title's memory, not copied as each draw is made: 2.1 ms a frame
     // less of the title thread on stage 4's jet side (console test 19, looked right)
-    gpu::g_draw_copy = false;
+    // sheroes-nx: copied after all. Sonic Heroes' particles (RenderWare's PTank: quad lists from one shared dynamic
+    // vertex buffer, 0x2C5796) are overwritten before the render thread draws them, and read later they were
+    // garbage: the sea spray drawn as lines across the screen (Switch, 2026-11-13; the draw census found NaN and
+    // 1e38 positions in those draws only, and the PC, which copies, never showed it). The title thread has room
+    // for the copy: under 1 ms a frame in the stage
+    gpu::g_draw_copy = true;
     gpu::g_track_state = true;  // the render thread compares only the render states and constants written
     gpu::g_reuse_constants = true;  // a draw with the previous draw's constants reuses their upload
     return s;

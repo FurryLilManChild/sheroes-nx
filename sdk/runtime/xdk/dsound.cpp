@@ -278,8 +278,14 @@ void Levels(Voice& v, float g[8][2]) {
     }
     float right[3] = {g_top[1] * g_front[2] - g_top[2] * g_front[1], g_top[2] * g_front[0] - g_top[0] * g_front[2],
                       g_top[0] * g_front[1] - g_top[1] * g_front[0]};
+    // sheroes-nx: the right vector made unit length and the pan held to -1..1. Sonic Heroes passes an orientation
+    // that is not unit length, so the pan ran far past 1 and one side's gain went hugely negative: its 3D effects
+    // played at up to +14 dB over full scale, 19 % of the mix clipped (Switch, 2026-11-13, the dsound mix report)
+    float rlen = std::sqrt(right[0] * right[0] + right[1] * right[1] + right[2] * right[2]);
+    if (rlen > 1e-6f)
+        for (float& r : right) r /= rlen;
     float side = rel ? d[0] : d[0] * right[0] + d[1] * right[1] + d[2] * right[2];
-    float pan = dist > 1e-3f ? side / dist : 0.0f;
+    float pan = dist > 1e-3f ? std::clamp(side / dist, -1.0f, 1.0f) : 0.0f;
     for (int c = 0; c < 8; c++) {
         g[c][0] *= att * std::min(1.0f, 1.0f - pan);
         g[c][1] *= att * std::min(1.0f, 1.0f + pan);

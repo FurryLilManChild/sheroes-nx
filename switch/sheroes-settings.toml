@@ -70,10 +70,9 @@ cpu_mhz = 0
 gpu_mhz = 0
 mem_mhz = 0
 
-# Performance: false (default) = no copy: the render thread reads each draw's vertices from the game's memory,
-# as the Xbox's GPU did. true = the game copies them as it makes the draw (slower; try it if models or effects
-# show wrong shapes or flicker).
-draw_copy = false
+# true (default) = each draw's vertices are copied as the game makes it. false = the render thread reads them from
+# the game's memory later, which is a little faster but draws the sea spray as long lines across the screen.
+draw_copy = true
 
 # Performance: true (default) = a draw with the same constants as the previous one reuses them instead of
 # uploading them again. false = always upload them.

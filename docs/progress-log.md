@@ -66,6 +66,16 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   made from the fields only, and a full table starts over instead of falling back. The rolloff factor the game
   sets (2.0, 0x26B176) was ignored; 3D sounds now fade by it. The first 60 sounds played are logged with their
   levels, to compare the music with the effects.
+- Fourth Switch run: textures right, 60.0 fps; still the effects too loud and the sea spray drawn as long lines.
+  Mark: no comparison tests, a log that catches it. The port menu (+ and -) brought over from main.
+- Fifth Switch run (2026-11-13), with a 10 s mix report and a draw census. Sound: the 3D effects played at up to +14
+  dB over full scale and 19 % of the mix clipped, while their gains read 1.0 at most: the pan. The game's listener
+  orientation is not unit length, so side / distance ran far past 1 and one side's gain went hugely negative. The
+  right vector is now made unit length and the pan held to -1..1. Spray: the census found NaN and 1e38 positions
+  only in fixed-function quad lists (RenderWare's PTank particles, DrawVertices from the one shared dynamic vertex
+  buffer at [0x611E40], 0x2C5796). The Switch build defaulted to draw_copy = false (the render thread reads the
+  vertices from the game's memory when it draws), the PC to true; the particles' buffer is rewritten before the
+  render thread gets to it. draw_copy is now true on the Switch too (the title thread is under 1 ms a frame).
 
 ## 2026-11-09: branch xbe-recomp started
 

@@ -80,6 +80,8 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   into the stage: 33 to 60 fps, the render thread 12 to 25 ms a frame, of which "assemble" 4 to 15 ms (0.3 to 0.5
   ms in the runs before). That was the draw census itself: text formatting for every draw on the render thread.
   The census and the mix report are switched off in the code (kDrawCensus, kMixReport). With CPU boost Mark had 60.
+- Seventh Switch run (2026-11-14), diagnostics off: Mark: "Full speed ahead at stock clocks", 60 fps through the
+  first stage at stock clocks. The goal set on 2026-11-09 (60 fps at stock clocks) is met in the first stage.
 
 ## 2026-11-09: branch xbe-recomp started
 

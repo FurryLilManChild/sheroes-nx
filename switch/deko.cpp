@@ -791,10 +791,41 @@ uint32_t DekoBackend::NewDescriptor(const Image& im) {
     return slot;
 }
 
-uint32_t DekoBackend::SamplerSlot(const DkSampler& s) {
+uint32_t DekoBackend::SamplerSlot(const DkSampler& in) {
+    // sheroes-nx: the key is the fields alone. DkSampler has padding after compareEnable that dkSamplerDefaults
+    // leaves as it was, so hashing the struct as given made a new key for samplers that were the same, and Sonic
+    // Heroes ran out of the 1,024 slots in its first stage (Switch, 2026-11-13: "out of sampler descriptors"
+    // 158,857 times); every later sampler fell back to slot 0, the clamped linear one, and repeating textures
+    // stretched into lines
+    DkSampler s;
+    std::memset(&s, 0, sizeof(s));
+    s.minFilter = in.minFilter;
+    s.magFilter = in.magFilter;
+    s.mipFilter = in.mipFilter;
+    for (int i = 0; i < 3; i++) s.wrapMode[i] = in.wrapMode[i];
+    s.lodClampMin = in.lodClampMin;
+    s.lodClampMax = in.lodClampMax;
+    s.lodBias = in.lodBias;
+    s.lodSnap = in.lodSnap;
+    s.compareEnable = in.compareEnable;
+    s.compareOp = in.compareOp;
+    for (int i = 0; i < 4; i++) s.borderColor[i].value_ui = in.borderColor[i].value_ui;
+    s.maxAnisotropy = in.maxAnisotropy;
+    s.reductionMode = in.reductionMode;
     uint64_t key = Hash(&s, sizeof(s));
     if (auto it = samplers_.find(key); it != samplers_.end()) return it->second;
     uint32_t slot = next_sampler_++;
+    if (slot >= core_.config().sampler_descriptors && next_sampler_ > 2) {
+        // sheroes-nx: still full (truly that many different samplers): start the table over, keeping the two
+        // fixed ones. The descriptors are written in command order, so draws already recorded keep theirs
+        static uint32_t resets = 0;
+        LOGW("deko3d: sampler table full (%u samplers), starting it over (%u times so far)", unsigned(samplers_.size()),
+             ++resets);
+        samplers_.clear();
+        for (auto& m : sampler_memo_) m.valid = false;
+        next_sampler_ = std::max(linear_, point_) + 1;
+        slot = next_sampler_++;
+    }
     if (slot >= core_.config().sampler_descriptors) {
         LOGE("deko3d: out of sampler descriptors");
         slot = 0;

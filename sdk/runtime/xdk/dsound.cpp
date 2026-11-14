@@ -149,6 +149,10 @@ struct Done {
 std::recursive_mutex g_lock;
 std::map<uint32_t, Voice> g_voices;
 float g_listener[3] = {}, g_front[3] = {0, 0, 1}, g_top[3] = {0, 1, 0};
+// sheroes-nx: the listener's rolloff factor: 6 dB a doubling of distance past the minimum, times this. Sonic Heroes
+// sets 2 (0x26B176: SetRolloffFactor(2.0), after SetDistanceFactor(10.0)); ignored before, so distant sounds were
+// too loud (Mark, Switch and PC, 2026-11-13)
+float g_rolloff = 1;
 // Completed packets' callbacks, run as the XDK runs them: in DirectSoundDoWork on the title's thread, so they never
 // overlap the title's own stream code. A stream flushed or released runs its own at once, before it is gone.
 std::deque<Done> g_done;
@@ -257,7 +261,7 @@ void Levels(Voice& v, float g[8][2]) {
     float dist = std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
     float att = 1;
     if (dist > v.min_dist && v.curve.empty()) {
-        att = v.min_dist / std::min(dist, v.max_dist);
+        att = std::pow(v.min_dist / std::min(dist, v.max_dist), g_rolloff);
     } else if (dist > v.min_dist && v.max_dist > v.min_dist) {
         // points spread evenly from min to max distance, 1.0 at min
         float at = (std::min(dist, v.max_dist) - v.min_dist) / (v.max_dist - v.min_dist) * v.curve.size();
@@ -556,7 +560,12 @@ HLE_STDCALL(IDirectSound_EnableHeadphones, 2) { return 0; }
 HLE_STDCALL(IDirectSound_SetMixBinHeadroom, 3) { return 0; }
 HLE_STDCALL(IDirectSound_CommitDeferredSettings, 1) { return 0; }
 HLE_STDCALL(IDirectSound_SetDopplerFactor, 3) { return 0; }
-HLE_STDCALL(IDirectSound_SetRolloffFactor, 3) { return 0; }
+HLE_STDCALL(IDirectSound_SetRolloffFactor, 3) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    g_rolloff = std::max(0.0f, F32(a[1]));
+    LOGR("dsound: rolloff factor %.2f", g_rolloff);
+    return 0;
+}
 HLE_STDCALL(IDirectSound_SetDistanceFactor, 3) { return 0; }
 HLE_STDCALL(IDirectSound_SetVelocity, 5) { return 0; }
 HLE_STDCALL(IDirectSound_SetI3DL2Listener, 3) { return 0; }
@@ -583,6 +592,7 @@ HLE_STDCALL(IDirectSound_SetAllParameters, 3) {
         g_front[i] = F32(R32(a[1] + 0x28 + i * 4));
         g_top[i] = F32(R32(a[1] + 0x34 + i * 4));
     }
+    g_rolloff = std::max(0.0f, F32(R32(a[1] + 0x20)));  // DS3DLISTENER: flRolloffFactor
     return 0;
 }
 HLE_STDCALL(DirectSoundDoWork, 0) {
@@ -700,6 +710,15 @@ BUFFER(SetBufferData, 3) {
     return 0;
 }
 BUFFER(Play, 4) {
+    // sheroes-nx: the first sounds' levels, to compare the music with the effects (Mark: effects too loud)
+    {
+        float d[3] = {v.p[0] - g_listener[0], v.p[1] - g_listener[1], v.p[2] - g_listener[2]};
+        static int shown = 0;
+        if (shown++ < 60) LOGR("dsound: play %08X: %u ch %u Hz, volume %.2f headroom %.2f, bins %u, 3D %d mode %u, distance %.1f "
+                  "(min %.1f max %.1f), rolloff %.2f", v.obj, unsigned(v.channels), unsigned(v.freq), v.volume,
+                  v.headroom, unsigned(v.nbins), int(v.is3d), unsigned(v.mode),
+                  std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]), v.min_dist, v.max_dist, g_rolloff);
+    }
     v.playing = true;
     v.looping = a[3] & 1;
     if (a[3] & 2) v.pos = 0;

@@ -51,6 +51,21 @@ The xboxrecomp-era log (0.1.0, 0.2.0) is in `docs/xboxrecomp-era/progress-log.md
   system (10 in Atmosphere's slab counts). The busy ranges are now backed up front, one object each: 0x00000000+128
   MB (image and heaps), the pool at 0xB0000000+64 MB, the stacks at 0xD0000000+32 MB. Backing on demand now logs a
   warning, to see if anything still needs it.
+- Second Switch run (2026-11-13), extracted folder: through the menus, but the title thread froze 44 s at boot and
+  10 s in the menus (the game opens all ~3,900 disc files and keeps them open, as measured on main), then a guest
+  trap at team select: an indirect call through a null object (0x2D4B80, jmp [eax+0x12C]), which the PC never hit.
+  Likely (not proven) some opens failed with that many files held open on the card.
+- Third Switch run (2026-11-13), the ISO in the game folder instead (one host file, as on the PC): no freezes, into
+  the first stage. Stock clocks (CPU 1020 MHz): 58 to 60 fps in the stage once loaded (10 s windows: 58.7, 58.7,
+  58.0, 59.5, 58.8, 60.0), the render thread 11 to 14 ms a frame, the GPU 9 to 10 ms, the title thread under 1 ms
+  to record. Mark: "the game has never been smoother". Problems: textures stretched into long lines on the level,
+  Tails' head black, the water flat dark blue with white flashes, the effects too loud. The log: "deko3d: out of
+  sampler descriptors" 158,857 times. DkSampler has padding after compareEnable that dkSamplerDefaults leaves as it
+  was, and the sampler table hashed the whole struct, so equal samplers took new slots until all 1,024 were used;
+  later ones fell back to slot 0, the clamped linear sampler, so repeating textures stretched. Now the key is
+  made from the fields only, and a full table starts over instead of falling back. The rolloff factor the game
+  sets (2.0, 0x26B176) was ignored; 3D sounds now fade by it. The first 60 sounds played are logged with their
+  levels, to compare the music with the effects.
 
 ## 2026-11-09: branch xbe-recomp started
 

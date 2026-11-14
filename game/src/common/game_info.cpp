@@ -2,6 +2,10 @@
 #include "core/input.h"
 #include "gpu/backend.h"
 
+namespace xdk {
+extern uint32_t g_speaker_gain_db;  // dsound.cpp
+}
+
 namespace sheroes {
 void ScriptPad(int port, input::Pad& pad);  // pad_script.cpp
 }
@@ -16,7 +20,7 @@ const app::GameInfo app::kGame = {
     .splash = L"splash",                  // optional splash.png or splash.bmp beside the exe
     .missing = L"Put the game in the assets folder: its disc image (.iso), or default.xbe with its folders beside it.",
     .images = {{"default.xbe", "SHEROES"}},  // each recompiled xbe and its exe, for title launches
-    .options = {},                        // game settings kept in the settings file
+    .options = {{"speaker_gain_db", nullptr, &xdk::g_speaker_gain_db}},  // game settings kept in the settings file
     .load = nullptr,                      // reads more from the settings file's toml::table
     .save = nullptr,                      // writes more into it
     .init = nullptr,                      // after the settings load, before the window and boot

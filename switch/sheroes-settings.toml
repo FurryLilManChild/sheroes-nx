@@ -86,3 +86,7 @@ render_spin_us = 0
 # true (default): shows the FPS and the resolution in Status Monitor Overlay / Horizon OC Monitor, and follows the
 # handheld/docked mode picked in ReverseNX-RT. Needs SaltyNX 0.7.0 or later; without SaltyNX it does nothing.
 saltynx = true
+
+# Sound: extra gain in dB on the speaker mix (the music and the 2D sounds), against the 3D effects. The Xbox's sound
+# chip program makes up 6 dB there; 6 is the default. Raise it if the effects are still too loud against the music.
+speaker_gain_db = 6

@@ -98,6 +98,15 @@ X86Func* Find(uint32_t guest);
 #define HAS_IDirectSoundBuffer_Pause 0
 #endif
 
+namespace xdk {
+// sheroes-nx: gain on the speaker mix bins (0-5), in dB. The console's effects image (the DSP program DSound loads)
+// makes up the 6 dB of headroom the 2D voices are mixed with, while 3D voices reach the speakers through the HRTF
+// bins (6-9) without it. Found on the xboxrecomp branch (main, sheroes_menu.c "music volume", 2026-10-27: music in
+// bins 0/1, effects in the HRTF bins, a passthrough DSP left the music 6 dB low). Here the effects were too loud
+// against the music (Mark, Switch, 2026-11-13). Setting speaker_gain_db in sheroes-settings.toml
+uint32_t g_speaker_gain_db = 6;
+}
+
 namespace {
 
 constexpr uint32_t kStreamVtable = SYM(DSound_StreamVtable);  // CDirectSoundStream XMediaObject vtable
@@ -249,6 +258,7 @@ void Levels(Voice& v, float g[8][2]) {
             uint32_t b = bin[s];
             if (speakers && (b == 3 || b > 9)) continue;  // sub and effect sends
             float x = Db(v.bin_mb[b]) * v.volume * v.headroom * (b == 2 ? 0.707f : 1.0f);
+            if (speakers && b < 6) x *= Db(int32_t(std::min<uint32_t>(xdk::g_speaker_gain_db, 24)) * 100);
             // even bins are left, odd right, 2 is the centre
             if (!speakers || b == 2 || !(b & 1)) g[c][0] = std::max(g[c][0], x);
             if (!speakers || b == 2 || (b & 1)) g[c][1] = std::max(g[c][1], x);

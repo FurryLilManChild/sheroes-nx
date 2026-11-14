@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <list>
 #include <fstream>
 #include <map>
 #include <memory>
@@ -127,10 +128,18 @@ fs::path MatchCase(const fs::path& dir, const std::vector<std::string>& parts) {
     return cur;
 }
 
+struct File;
+void ForgetLazy(File* f);
+
 struct File : Object {
     fs::path host;
     std::string xbox;
     FILE* fp = nullptr;
+    // sheroes-nx: a game file opened to read only, its FILE opened at its first read (OpenLazy) and closed again when
+    // too many are open. Sonic Heroes opens all ~3,900 disc files at boot and keeps them open: from the card's folder
+    // that froze the title 44 s at boot and 10 s in the menus, and opens failed later on (a null object at team
+    // select). Switch, 2026-11-13; main's lazy opens did the same for the xboxrecomp build
+    bool lazy = false;
     const Disc::Entry* entry = nullptr;  // on the disc image instead of a host path
     bool dir = false;
     uint64_t pos = 0;
@@ -143,6 +152,7 @@ struct File : Object {
     std::mutex io;  // threads sharing a handle: seek and transfer stay together
     File() : Object(ObjType::File) {}
     ~File() override {
+        if (lazy) ForgetLazy(this);
         if (fp) std::fclose(fp);
         if (delete_on_close) {
             std::error_code ec;
@@ -151,6 +161,44 @@ struct File : Object {
         }
     }
 };
+
+// the lazy files with a FILE open, most recently read first; past kLazyOpen the oldest idle one is closed
+constexpr size_t kLazyOpen = 48;
+std::mutex g_lazy_lock;
+std::list<File*> g_lazy_open;
+
+void ForgetLazy(File* f) {
+    std::lock_guard<std::mutex> lock(g_lazy_lock);
+    g_lazy_open.remove(f);
+}
+
+// call with f->io held: makes sure the FILE is open and marks it most recently used
+bool OpenLazy(File& f) {
+    if (!f.lazy) return f.fp != nullptr;
+    std::lock_guard<std::mutex> lock(g_lazy_lock);
+    if (f.fp) {
+        g_lazy_open.remove(&f);
+        g_lazy_open.push_front(&f);
+        return true;
+    }
+    // close the oldest idle ones (a file another thread is reading keeps its FILE)
+    for (auto it = g_lazy_open.end(); g_lazy_open.size() >= kLazyOpen && it != g_lazy_open.begin();) {
+        --it;
+        File* old = *it;
+        if (!old->io.try_lock()) continue;
+        std::fclose(old->fp);
+        old->fp = nullptr;
+        old->io.unlock();
+        it = g_lazy_open.erase(it);
+    }
+    f.fp = std::fopen(f.host.string().c_str(), "rb");
+    if (!f.fp) {
+        LOGW("files: cannot open %s", f.host.string().c_str());
+        return false;
+    }
+    g_lazy_open.push_front(&f);
+    return true;
+}
 
 struct Link : Object {
     std::string target;
@@ -503,9 +551,10 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
     // (GENERIC_WRITE, GENERIC_ALL, MAXIMUM_ALLOWED, WRITE_DAC/OWNER, DELETE, FILE_WRITE_DATA/APPEND/EA/ATTRIBUTES)
     if (std::string(mode) == "r+b" && !(access & 0x520D0116u)) mode = "rb";
 #endif
-    FILE* fp = std::fopen(host.c_str(), mode);
-    if (!fp && std::string(mode) == "r+b") fp = std::fopen(host.c_str(), "rb");  // read only media
-    if (!fp) {
+    const bool lazy = std::string(mode) == "rb" && InGame(host);
+    FILE* fp = lazy ? nullptr : std::fopen(host.c_str(), mode);
+    if (!fp && !lazy && std::string(mode) == "r+b") fp = std::fopen(host.c_str(), "rb");  // read only media
+    if (!fp && !lazy) {
         LOGW("NtCreateFile: cannot open %s", host.c_str());
         IoStatus(iosb, kAccessDenied, 0);
         return kAccessDenied;
@@ -515,6 +564,7 @@ KERNEL_EXPORT(190, NtCreateFile, 9) {
     f->host = host;
     f->xbox = Normalize(name);
     f->fp = fp;
+    f->lazy = lazy;
     f->delete_on_close = options & 0x1000;  // FILE_DELETE_ON_CLOSE
     f->async = !(options & 0x30);
     W32(handle_out, NewHandle(f));
@@ -542,14 +592,18 @@ KERNEL_EXPORT(202, NtOpenFile, 6) {
     f->xbox = Normalize(name);
     f->dir = hs.dir;
     if (!f->dir) {
+        if (!(a[1] & 0x520D0116u) && InGame(host)) {
+            f->lazy = true;  // opened at its first read
+        } else {
 #ifdef __SWITCH__
-        // as in NtCreateFile: only a handle that writes may lock the file on the card
-        if (a[1] & 0x520D0116u) f->fp = std::fopen(host.c_str(), "r+b");
+            // as in NtCreateFile: only a handle that writes may lock the file on the card
+            if (a[1] & 0x520D0116u) f->fp = std::fopen(host.c_str(), "r+b");
 #else
-        f->fp = std::fopen(host.c_str(), "r+b");
+            f->fp = std::fopen(host.c_str(), "r+b");
 #endif
-        if (!f->fp) f->fp = std::fopen(host.c_str(), "rb");
-        if (!f->fp) return kAccessDenied;
+            if (!f->fp) f->fp = std::fopen(host.c_str(), "rb");
+            if (!f->fp) return kAccessDenied;
+        }
     }
     f->async = !(options & 0x30);
     W32(handle_out, NewHandle(f));
@@ -596,7 +650,7 @@ static FileBytes SmallFile(File& f) {
     FileBytes& slot = cache[key];  // null unless filled below
     std::error_code ec;
 #ifdef __SWITCH__
-    uint64_t size = f.entry ? f.entry->size : f.fp ? OpenSize(f.fp, ec) : uint64_t(-1);
+    uint64_t size = f.entry ? f.entry->size : f.lazy ? HostSize(f.host, ec) : f.fp ? OpenSize(f.fp, ec) : uint64_t(-1);
 #else
     uint64_t size = f.entry ? f.entry->size : HostSize(f.host, ec);
 #endif
@@ -605,7 +659,7 @@ static FileBytes SmallFile(File& f) {
     size_t got = 0;
     if (f.entry) {
         got = MountedDisc()->Read(*f.entry, 0, bytes->data(), size_t(size));
-    } else if (f.fp) {
+    } else if (OpenLazy(f)) {
         Seek(f.fp, 0);
         got = std::fread(bytes->data(), 1, size_t(size), f.fp);
     }
@@ -621,8 +675,8 @@ static FileBytes SmallFile(File& f) {
 static uint32_t Transfer(const Args& a, bool write, uint32_t pages) {
     uint32_t h = a[0], event = a[1], apc = a[2], apc_ctx = a[3], iosb = a[4], buf = a[5], len = a[6], off = a[7];
     auto f = FileFromHandle(h);
-    if (!f || (!f->fp && !f->entry)) return kInvalidHandle;
-    if (write && f->entry) return kAccessDenied;
+    if (!f || (!f->fp && !f->entry && !f->lazy)) return kInvalidHandle;
+    if (write && (f->entry || f->lazy)) return kAccessDenied;
     // diagnostic: SHEROES_SLOW_READ_MS stretches every read, so a PC loads as slowly as an SD card
     static const int slow_ms = [] {
         const char* v = std::getenv("SHEROES_SLOW_READ_MS");
@@ -634,6 +688,7 @@ static uint32_t Transfer(const Args& a, bool write, uint32_t pages) {
     uint64_t pos = Offset(*f, off);
     auto t0 = std::chrono::steady_clock::now();
     FileBytes cached = write ? nullptr : SmallFile(*f);
+    if (!cached && f->lazy && !OpenLazy(*f)) return kAccessDenied;
     if (f->fp && !cached) Seek(f->fp, pos);
     uint32_t n = 0;
     while (cached && n < len && pos + n < cached->size()) {

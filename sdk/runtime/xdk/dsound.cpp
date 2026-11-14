@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
+#include <cstdio>
 #include <deque>
 #include <map>
 #include <vector>
@@ -97,6 +98,11 @@ X86Func* Find(uint32_t guest);
 #define SYM_IDirectSoundBuffer_Pause FFFFFF0E
 #define HAS_IDirectSoundBuffer_Pause 0
 #endif
+
+namespace xdk {
+// sheroes-nx: the port menu's volumes, in percent: stereo voices (the music) and mono ones (effects and voices)
+uint32_t g_music_pct = 100, g_effects_pct = 100;
+}
 
 namespace {
 
@@ -249,6 +255,7 @@ void Levels(Voice& v, float g[8][2]) {
             uint32_t b = bin[s];
             if (speakers && (b == 3 || b > 9)) continue;  // sub and effect sends
             float x = Db(v.bin_mb[b]) * v.volume * v.headroom * (b == 2 ? 0.707f : 1.0f);
+            x *= float(std::min<uint32_t>(v.channels >= 2 ? xdk::g_music_pct : xdk::g_effects_pct, 400)) / 100.0f;
             // even bins are left, odd right, 2 is the centre
             if (!speakers || b == 2 || !(b & 1)) g[c][0] = std::max(g[c][0], x);
             if (!speakers || b == 2 || (b & 1)) g[c][1] = std::max(g[c][1], x);
@@ -308,6 +315,18 @@ void Render(float* out, uint32_t frames) {
             last = now;
         }
     }
+    // sheroes-nx diagnostic (Mark, 2026-11-13: the effects far too loud, the Switch at half volume): what each voice
+    // adds to the mix, and how hard the mix hits full scale, reported every 10 s (MixReport)
+    struct VoiceEnergy {
+        double energy = 0, peak_gain = 0;
+        uint64_t frames = 0;
+        char what[160] = {};
+    };
+    static std::map<uint32_t, VoiceEnergy> energy;
+    static double mix_energy = 0, mix_peak = 0;
+    static uint64_t mix_samples = 0, mix_clipped = 0, voice_max = 0;
+    static auto mix_last = std::chrono::steady_clock::now();
+    uint64_t voices_now = 0;
     for (auto& [obj, v] : g_voices) {
         if (v.paused || v.sync || (!v.stream && !v.playing)) continue;
         if (v.stream && v.starved) {
@@ -329,6 +348,8 @@ void Render(float* out, uint32_t frames) {
             }
         };
         uint32_t base = v.data + v.play_start;
+        double v_energy = 0;
+        uint64_t v_frames = 0;
         double step = double(v.freq ? v.freq : v.rate) / audio::kRate;
         for (uint32_t i = 0; i < frames; i++) {
             uint32_t f = uint32_t(v.pos);
@@ -384,8 +405,56 @@ void Render(float* out, uint32_t frames) {
             b += (b1 - b) * t;
             out[i * 2] += a;
             out[i * 2 + 1] += b;
+            v_energy += double(a) * a + double(b) * b;
+            v_frames++;
             v.pos += step;
         }
+        if (v_frames) {
+            voices_now++;
+            VoiceEnergy& ve = energy[obj];
+            ve.energy += v_energy;
+            ve.frames += v_frames;
+            float gmax = 0;
+            for (int c = 0; c < 8; c++) gmax = std::max({gmax, g[c][0], g[c][1]});
+            if (gmax >= ve.peak_gain) {
+                ve.peak_gain = gmax;
+                float d[3] = {v.p[0] - g_listener[0], v.p[1] - g_listener[1], v.p[2] - g_listener[2]};
+                std::snprintf(ve.what, sizeof(ve.what),
+                              "%u ch %u Hz%s, volume %.1f dB, headroom %.1f dB, bins %u (first %u, %d mB), 3D %d dist %.0f "
+                              "(min %.0f max %.0f)", unsigned(v.channels), unsigned(v.freq ? v.freq : v.rate),
+                              v.stream ? " stream" : v.looping ? " loop" : "", 20 * std::log10(std::max(v.volume, 1e-5f)),
+                              20 * std::log10(std::max(v.headroom, 1e-5f)), unsigned(v.nbins), unsigned(v.nbins ? v.bin[0] : 0),
+                              int(v.nbins ? v.bin_mb[v.bin[0]] : 0), int(v.is3d),
+                              std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]), v.min_dist, v.max_dist);
+            }
+        }
+    }
+    voice_max = std::max(voice_max, voices_now);
+    for (uint32_t i = 0; i < frames * 2; i++) {
+        float x = std::fabs(out[i]);
+        mix_energy += double(x) * x;
+        mix_peak = std::max(mix_peak, double(x));
+        mix_clipped += x > 1.0f;
+    }
+    mix_samples += frames * 2;
+    if (std::chrono::steady_clock::now() - mix_last >= std::chrono::seconds(10) && mix_samples) {
+        mix_last = std::chrono::steady_clock::now();
+        LOGR("dsound mix: level %.1f dBFS average, peak %.1f dBFS, %.2f%% of samples clipped, up to %llu voices at once",
+             10 * std::log10(std::max(mix_energy / double(mix_samples), 1e-12)), 20 * std::log10(std::max(mix_peak, 1e-6)),
+             100.0 * double(mix_clipped) / double(mix_samples), (unsigned long long)voice_max);
+        std::vector<std::pair<double, uint32_t>> top;
+        for (auto& [o, ve] : energy) top.push_back({ve.energy, o});
+        std::sort(top.rbegin(), top.rend());
+        for (size_t k = 0; k < std::min<size_t>(top.size(), 8); k++) {
+            const VoiceEnergy& ve = energy[top[k].second];
+            LOGR("dsound mix:   %4.1f%% of the sound, %.1f dBFS while playing (%.1f s), gain up to %.2f: %s",
+                 100.0 * top[k].first / std::max(mix_energy, 1e-12),
+                 10 * std::log10(std::max(ve.energy / double(std::max<uint64_t>(ve.frames * 2, 1)), 1e-12)),
+                 double(ve.frames) / audio::kRate, ve.peak_gain, ve.what);
+        }
+        energy.clear();
+        mix_energy = mix_peak = 0;
+        mix_samples = mix_clipped = voice_max = 0;
     }
     for (uint32_t i = 0; i < frames * 2; i++) out[i] = std::clamp(out[i], -1.0f, 1.0f);
 }

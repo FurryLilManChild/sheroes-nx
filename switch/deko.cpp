@@ -40,6 +40,7 @@
 #include "gpu/texture.h"
 #include "gpu/vertex.h"
 #include "host.h"
+#include "menu.h"
 #include "kernel/kernel.h"
 #include "kernel/memory.h"
 #include "uam_api.h"
@@ -514,6 +515,7 @@ private:
     // present
     void EnsureSwapchain();
     void DrawFrame(Image* src, int image);
+    void DrawFrameGame(Image* src, int image);
     Image* Smaa(Image& src);
     void SmaaShaders();
     bool SmaaPass(int pass, Image& dst, Image* const* tex, uint32_t n, const float rt[4]);
@@ -2105,6 +2107,81 @@ void DekoBackend::EnsureSwapchain() {
 }
 
 void DekoBackend::DrawFrame(Image* src, int image) {
+    // sheroes-nx: the port menu and the FPS counter, made before the screen's image is bound (their upload may end
+    // the slot), drawn over the frame at the end
+    menu::Picture pics[2];
+    Image ov[2];
+    Upload ov_cb[2];
+    int nov = 0;
+    {
+        int n = menu::Overlays(int(swap_w_), int(swap_h_), pics);
+        for (int i = 0; i < n; i++) {
+            if (pics[i].w <= 0 || pics[i].h <= 0) continue;
+            if (!PixelImage(ov[nov], pics[i].px, uint32_t(pics[i].w) * 4, uint32_t(pics[i].w), uint32_t(pics[i].h))) continue;
+            const float c[8] = {0, 0, 1, 1, 0, 1, 1, 1};  // whole picture, no gamma, its alpha kept, one tap
+            ov_cb[nov] = Constants(c, sizeof(c));
+            pics[nov].x = pics[i].x;
+            pics[nov].y = pics[i].y;
+            pics[nov].w = pics[i].w;
+            pics[nov].h = pics[i].h;
+            nov++;
+        }
+    }
+    DrawFrameGame(src, image);
+    if (nov) {
+        DkImage& sw = swapchain_.Image(image);
+        DkImageView v;
+        dkImageViewDefaults(&v, &sw);
+        for (int i = 0; i < nov; i++) Sample(ov[i]);
+        Barrier();
+        dkCmdBufBindRenderTarget(Cb(), &v, nullptr);
+        uint64_t hv, hp;
+        const DkShader* vs = Module(kBlitHlsl, "vs", vkshader::Stage::Vertex, hv);
+        const DkShader* ps = Module(kBlitHlsl, "psmain", vkshader::Stage::Pixel, hp);
+        if (vs && ps) {
+            DkCmdBuf cmd = Cb();
+            const DkShader* pair[] = {vs, ps};
+            dkCmdBufBindShaders(cmd, DkStageFlag_GraphicsMask, pair, 2);
+            DkRasterizerState rs;
+            dkRasterizerStateDefaults(&rs);
+            rs.cullMode = DkFace_None;
+            dkCmdBufBindRasterizerState(cmd, &rs);
+            DkDepthStencilState ds;
+            dkDepthStencilStateDefaults(&ds);
+            ds.depthTestEnable = ds.depthWriteEnable = false;
+            dkCmdBufBindDepthStencilState(cmd, &ds);
+            DkColorState cs;
+            dkColorStateDefaults(&cs);
+            cs.blendEnableMask = 1;
+            dkCmdBufBindColorState(cmd, &cs);
+            DkBlendState bs;
+            dkBlendStateDefaults(&bs);
+            bs.colorBlendOp = bs.alphaBlendOp = DkBlendOp_Add;
+            bs.srcColorBlendFactor = DkBlendFactor_One;
+            bs.dstColorBlendFactor = DkBlendFactor_InvSrcAlpha;
+            bs.srcAlphaBlendFactor = DkBlendFactor_Zero;
+            bs.dstAlphaBlendFactor = DkBlendFactor_One;
+            dkCmdBufBindBlendState(cmd, 0, &bs);
+            DkColorWriteState cw;
+            dkColorWriteStateDefaults(&cw);
+            dkCmdBufBindColorWriteState(cmd, &cw);
+            dkCmdBufBindVtxAttribState(cmd, nullptr, 0);
+            dkCmdBufBindVtxBufferState(cmd, nullptr, 0);
+            for (int i = 0; i < nov; i++) {
+                dkCmdBufBindUniformBuffer(cmd, DkStage_Vertex, 1, ov_cb[i].gpu, kUboRange);
+                dkCmdBufBindUniformBuffer(cmd, DkStage_Fragment, 1, ov_cb[i].gpu, kUboRange);
+                const DkResHandle tex[2] = {dkMakeTextureHandle(ov[i].desc, point_), dkMakeTextureHandle(lut_.desc, point_)};
+                dkCmdBufBindTextures(cmd, DkStage_Fragment, 0, tex, 2);
+                SetViewport(float(pics[i].x), float(pics[i].y), float(pics[i].w), float(pics[i].h));
+                SetScissor(0, 0, int32_t(swap_w_), int32_t(swap_h_));
+                dkCmdBufDraw(cmd, DkPrimitive_Triangles, 3, 1, 0, 0);
+            }
+        }
+        for (int i = 0; i < nov; i++) Retire(ov[i]);
+    }
+}
+
+void DekoBackend::DrawFrameGame(Image* src, int image) {
     // the frame letterboxed to the game's aspect over black
     DkImage& sw = swapchain_.Image(image);
     rendering_ = false;
@@ -2409,6 +2486,7 @@ void DekoBackend::LogPerf() {
         double sum = 0;
         for (int i = 0; i < n10; i++) sum += overlay_avg[i];
         host::OverlaysSecond(fps1, sum / n10);
+        menu::Frame(fps1);
         overlay_t = now;
         overlay_frames = presents_;
     }

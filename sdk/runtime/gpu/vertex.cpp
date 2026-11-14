@@ -5,7 +5,13 @@
 #endif
 
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <string>
 #include <cstring>
+#include <map>
+#include <mutex>
 
 #include <dxgiformat.h>
 
@@ -534,6 +540,101 @@ bool DrawStreamSpans(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     return any;
 }
 
+
+// sheroes-nx diagnostic (Mark, 2026-11-13: sea spray drawn as long lines on the Switch's deko3d renderer). Every kind
+// of draw, the first time it is seen: primitive, indexed or not, how its vertices reach the GPU (raw or converted,
+// native quads and fans: only deko3d draws those as they are), vertex format and stride, point sprites, fixed
+// function or a vertex program, and three sample vertices (for fixed function and XYZRHW draws, where they land on
+// the screen too). Then, while running, the draws whose sample vertices land far outside the screen or behind the
+// camera, counted by kind and reported every 10 s with the worst one: the lines across the screen should be there
+void CensusDraw(const State& s, const VertexShader& layout, const DrawRange& d, bool raw) {
+    const auto& pos = layout.inputs[0];
+    if (pos.stream < 0 || !pos.type || pos.type == kTypeNone || !s.streams[size_t(pos.stream)].vb) return;
+    const bool ffp = !(s.vs_handle & 1) || !s.vs || s.vs->program.empty();
+    const bool rhw = Pretransformed(s);
+    const bool native = g_native_polygons.load(std::memory_order_relaxed) && (d.prim == 3 || (d.prim >= 7 && d.prim <= 10));
+    const uint32_t stride = StrideOf(s, layout, pos);
+    const uint32_t sprite = s.rs[kRsPointSpriteEnable];
+    uint64_t key = uint64_t(d.prim) | uint64_t(d.ip != nullptr) << 4 | uint64_t(raw) << 5 | uint64_t(native) << 6 |
+                   uint64_t(ffp) << 7 | uint64_t(rhw) << 8 | uint64_t(sprite != 0) << 9 | uint64_t(pos.type & 0xFF) << 12 |
+                   uint64_t(stride & 0xFFFF) << 20 | uint64_t(ffp ? 0 : (s.vs->hash & 0xFFFFFFF)) << 36;
+    const uint8_t* base = StreamData(s, pos.stream) + pos.offset;
+    float wvp[16];
+    if (ffp && !rhw) {
+        // row vectors: world, then view, then projection (D3DTS_WORLD 256, VIEW 2, PROJECTION 3)
+        float wv[16];
+        auto mul = [](const float* a, const float* b, float* o) {
+            for (int r = 0; r < 4; r++)
+                for (int c = 0; c < 4; c++)
+                    o[r * 4 + c] = a[r * 4] * b[c] + a[r * 4 + 1] * b[4 + c] + a[r * 4 + 2] * b[8 + c] + a[r * 4 + 3] * b[12 + c];
+        };
+        mul(s.transforms[256].data(), s.transforms[2].data(), wv);
+        mul(wv, s.transforms[3].data(), wvp);
+    }
+    // sample: first, middle, last vertex the draw reads
+    char sample[3][96];
+    bool bad = false;
+    float worst = 0;
+    const uint32_t picks[3] = {0, d.count / 2, d.count - 1};
+    for (int k = 0; k < 3; k++) {
+        float v[4];
+        Convert(pos.type, base + size_t(DrawVertex(s, d, picks[k])) * stride, v);
+        if (ffp && !rhw) {
+            float c[4];
+            for (int j = 0; j < 4; j++) c[j] = v[0] * wvp[j] + v[1] * wvp[4 + j] + v[2] * wvp[8 + j] + wvp[12 + j];
+            float m = std::max(std::fabs(c[0]), std::fabs(c[1]));
+            float off = c[3] > 1e-6f ? m / c[3] : 1e9f;
+            if (!std::isfinite(off) || off > 50) { bad = true; worst = std::max(worst, std::isfinite(off) ? off : 1e9f); }
+            std::snprintf(sample[k], sizeof(sample[k]), "(%.1f %.1f %.1f) clip (%.1f %.1f %.1f w %.2f)", v[0], v[1], v[2],
+                          c[0], c[1], c[2], c[3]);
+        } else if (rhw) {
+            float off = std::max(std::fabs(v[0] - 320) / 320, std::fabs(v[1] - 240) / 240);
+            if (!std::isfinite(off) || off > 50 || !std::isfinite(v[3])) { bad = true; worst = std::max(worst, std::isfinite(off) ? off : 1e9f); }
+            std::snprintf(sample[k], sizeof(sample[k]), "screen (%.1f %.1f %.3f rhw %.4f)", v[0], v[1], v[2], v[3]);
+        } else {
+            if (!std::isfinite(v[0]) || !std::isfinite(v[1]) || !std::isfinite(v[2]) || std::fabs(v[0]) > 1e6f ||
+                std::fabs(v[1]) > 1e6f || std::fabs(v[2]) > 1e6f) { bad = true; worst = 1e9f; }
+            std::snprintf(sample[k], sizeof(sample[k]), "(%.1f %.1f %.1f %.1f)", v[0], v[1], v[2], v[3]);
+        }
+    }
+    static std::mutex lock;
+    struct Kind {
+        uint64_t seen = 0, bad = 0;
+        float worst = 0;
+        std::string example;
+    };
+    static std::map<uint64_t, Kind> kinds;
+    static auto last = std::chrono::steady_clock::now();
+    std::lock_guard<std::mutex> g(lock);
+    Kind& kd = kinds[key];
+    char head[200];
+    std::snprintf(head, sizeof(head), "prim %u%s %u verts, %s%s, %s%s, pos type %02X stride %u%s, base %d", d.prim,
+                  d.ip ? " indexed" : "", d.count, raw ? "raw" : "converted", native ? " native" : "",
+                  ffp ? "fixed function" : "vertex program", rhw ? " XYZRHW" : "", pos.type, stride,
+                  sprite ? ", point sprites" : "", int(s.base_vertex));
+    if (!kd.seen++ && kinds.size() <= 250)
+        LOGR("census: new %016llX: %s; v %s | %s | %s", (unsigned long long)key, head, sample[0], sample[1], sample[2]);
+    if (bad) {
+        kd.bad++;
+        if (worst >= kd.worst) {
+            kd.worst = worst;
+            kd.example = std::string(head) + "; v " + sample[0] + " | " + sample[1] + " | " + sample[2];
+        }
+    }
+    auto now = std::chrono::steady_clock::now();
+    if (now - last >= std::chrono::seconds(10)) {
+        last = now;
+        for (auto& [k, v] : kinds) {
+            if (!v.bad) continue;
+            LOGR("census: off screen %016llX: %llu of %llu draws in 10 s, worst x%.0f: %s", (unsigned long long)k,
+                 (unsigned long long)v.bad, (unsigned long long)v.seen, v.worst, v.example.c_str());
+            v.bad = 0;
+            v.worst = 0;
+        }
+        for (auto& [k, v] : kinds) v.seen = 1;
+    }
+}
+
 bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* ip, Assembled& out) {
     ResetAssembled(out);
     if (!count || prim < 1 || prim > 10) return false;
@@ -562,6 +663,7 @@ bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, con
 
     // the guest's own vertices when the input assembler can read every element of them
     bool raw = kRawVertices && RawReadable(s, inputs);
+    CensusDraw(s, *layout, d, raw);
     if (raw) return AssembleRaw(s, inputs, d, out);
     return AssembleConverted(s, inputs, d, out);
 }

@@ -14,6 +14,7 @@
 #include "app/app.h"
 #include "core/log.h"
 #include "host.h"
+#include "menu.h"
 
 namespace input {
 
@@ -72,12 +73,11 @@ void Read(PadState& s, Pad& p, int port) {
     for (int i = 0; i < 8; i++)
         if (b & kButtons[i]) p.buttons |= uint16_t(1u << i);
     // A B X Y black white left trigger right trigger
-    constexpr u64 kByPosition[8] = {HidNpadButton_B,  HidNpadButton_A,  HidNpadButton_Y, HidNpadButton_X,
-                                    HidNpadButton_ZR, HidNpadButton_ZL, HidNpadButton_L, HidNpadButton_R};
-    constexpr u64 kByName[8] = {HidNpadButton_A,  HidNpadButton_B,  HidNpadButton_X, HidNpadButton_Y,
-                                HidNpadButton_ZR, HidNpadButton_ZL, HidNpadButton_L, HidNpadButton_R};
-    const u64* map = host::ButtonsByName() ? kByName : kByPosition;
-    for (int i = 0; i < 8; i++) p.analog[i] = (b & map[i]) ? 0xFF : 0;
+    constexpr u64 kSlot[8] = {HidNpadButton_A,  HidNpadButton_B,  HidNpadButton_X, HidNpadButton_Y,
+                              HidNpadButton_ZR, HidNpadButton_ZL, HidNpadButton_L, HidNpadButton_R};
+    uint8_t slot[8];
+    menu::ButtonMap(slot);
+    for (int i = 0; i < 8; i++) p.analog[i] = (b & kSlot[slot[i] & 7]) ? 0xFF : 0;
     // libnx's sticks are +-32767 with up positive, as the console's
     HidAnalogStickState l = padGetStickPos(&s, 0), r = padGetStickPos(&s, 1);
     p.lx = int16_t(std::clamp(l.x, -32767, 32767));
@@ -104,19 +104,12 @@ void Init() {
     }
     // a lone Joy-Con is a sideways pad (the console's own default is upright)
     hidSetNpadJoyHoldType(HidNpadJoyHoldType_Horizontal);
-    LOGI("input: libnx HID, 4 ports, lone Joy-Cons sideways; + and - together for the controllers screen");
+    LOGI("input: libnx HID, 4 ports, lone Joy-Cons sideways; + and - together for the port menu");
 }
 
-namespace {
-
-// + and - pressed together on a pad that has both: the system's controllers screen, where each Joy-Con of a pair
-// can become a player of its own (SL + SR on it) or two lone ones a pair again. Only player 1 opens it.
-void ControllersScreen(const Pad& p) {
-    static bool held = false;
-    const bool both = (p.buttons & 0x30) == 0x30;
-    if (both == held) return;
-    held = both;
-    if (!both) return;
+// the system's controllers screen, where each Joy-Con of a pair can become a player of its own (SL + SR on it) or two
+// lone ones a pair again. sheroes-nx: from the port menu (+ and - open the menu now)
+void ShowControllers() {
     HidLaControllerSupportArg arg;
     hidLaCreateControllerSupportArg(&arg);
     arg.hdr.player_count_min = 1;
@@ -125,8 +118,6 @@ void ControllersScreen(const Pad& p) {
     LOGI("input: controllers screen closed (0x%X)", rc);
 }
 
-}  // namespace
-
 Pad Poll(int port) {
     Pad p;
     if (port < 0 || port > 3) return p;
@@ -134,8 +125,8 @@ Pad Poll(int port) {
         std::lock_guard lock(g_lock);
         Read(g_pads[port], p, port);
     }
-    // outside the lock: the screen takes over until the player leaves it
-    if (port == 0 && p.connected && g_single[0] < 0 && !g_stopped) ControllersScreen(p);
+    // outside the lock: the port menu (+ and -), whose controllers screen takes over until the player leaves it
+    if (p.connected && !g_stopped) menu::OnPad(port, p);
     if (app::kGame.pad) app::kGame.pad(port, p);
     return p;
 }

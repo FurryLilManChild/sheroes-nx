@@ -30,6 +30,7 @@
 #include "host.h"
 #include "image_symbols.h"
 #include "kernel/kernel.h"
+#include "menu.h"
 
 namespace {
 
@@ -82,6 +83,8 @@ bool g_smaa = false;
 
 namespace host {
 bool ButtonsByName() { return g_buttons_by_name; }
+void SetButtonsByName(bool on) { g_buttons_by_name = on; }  // the port menu
+void SetSmaa(bool on) { g_smaa = on; }                      // the port menu
 bool UseDeko3d() { return g_renderer == "deko3d"; }
 bool DekoCachedUpload() { return g_dk_cached_upload; }
 uint32_t TextureCheckFrames() { return g_texture_check_frames; }
@@ -392,6 +395,7 @@ int main(int, char**) {
     std::setvbuf(stderr, nullptr, _IONBF, 0);
     logx::Init((app::ExeDir() / "logs").string(), app::kGame.log);
     app::Load();
+    menu::Init();
     if (app::kGame.init) app::kGame.init();
     host::OverlaysEnable(g_saltynx);
     host::OverlaysInit();  // before the game: its sm session can be lent for a moment if the process has no other

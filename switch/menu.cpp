@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -23,6 +24,7 @@
 namespace sheroes {
 extern uint32_t g_button_map;   // 0: by buttons_by_name; else 8 nibbles, each a Switch button slot + 1
 extern bool g_invert_x, g_invert_y, g_fps_counter;
+extern uint32_t g_stick_response;  // left stick: 0 linear, 1 gentle, 2 gentler
 }
 namespace xdk {
 extern uint32_t g_music_pct, g_effects_pct;  // dsound.cpp
@@ -59,7 +61,7 @@ std::atomic<bool> g_open{false};
 uint8_t g_map[8];  // the map in use
 
 enum Row {
-    R_TITLE_CTRL, R_LAYOUT, R_MAP0, R_MAP7 = R_MAP0 + 7, R_INV_X, R_INV_Y, R_CONTROLLERS,
+    R_TITLE_CTRL, R_LAYOUT, R_MAP0, R_MAP7 = R_MAP0 + 7, R_INV_X, R_INV_Y, R_STICK, R_CONTROLLERS,
     R_TITLE_DISP, R_SCALE, R_ANISO, R_SMAA, R_FPS, R_MUSIC, R_EFFECTS, R_BOOST,
     R_DEFAULTS, R_CLOSE, R_COUNT
 };
@@ -137,6 +139,13 @@ void RowText(int r, const char*& label, char* val, size_t vn, const char*& note)
             std::snprintf(val, vn, "%s", sheroes::g_invert_y ? "On" : "Off");
             note = "Right stick, up and down";
             break;
+        case R_STICK: {
+            static const char* const kNames[3] = {"Linear", "Gentle", "Gentler"};
+            label = "Stick response";
+            std::snprintf(val, vn, "%s", kNames[std::min<uint32_t>(sheroes::g_stick_response, 2)]);
+            note = "Left stick: less input for small pushes";
+            break;
+        }
         case R_CONTROLLERS:
             label = "Controllers screen";
             note = "Press A: pair or split Joy-Cons";
@@ -205,6 +214,7 @@ void Change(int r, int d) {
             break;
         case R_INV_X: sheroes::g_invert_x = !sheroes::g_invert_x; break;
         case R_INV_Y: sheroes::g_invert_y = !sheroes::g_invert_y; break;
+        case R_STICK: sheroes::g_stick_response = uint32_t(Wrap(int(std::min<uint32_t>(sheroes::g_stick_response, 2)), d, 3)); break;
         case R_SCALE: s.render_percent = kRenderPct[Wrap(IndexOf(kRenderPct, Count(kRenderPct), s.render_percent), d, Count(kRenderPct))]; break;
         case R_ANISO: s.aniso = kAniso[Wrap(IndexOf(kAniso, Count(kAniso), s.aniso), d, Count(kAniso))]; break;
         case R_SMAA: SetSmaa(!host::Smaa()); break;
@@ -220,6 +230,7 @@ void Defaults() {
     std::memcpy(g_map, kByPosition, 8);
     MapToSettings();
     sheroes::g_invert_x = sheroes::g_invert_y = false;
+    sheroes::g_stick_response = 0;
     sheroes::g_fps_counter = false;
     s.render_percent = 100;
     s.aniso = 2;
@@ -391,6 +402,15 @@ void OnPad(int port, input::Pad& p) {
             p = input::Pad{};
             p.connected = connected;
             return;
+        }
+    }
+    // the left stick's response curve, along its direction: a full push stays full, small pushes give less
+    if (uint32_t curve = std::min<uint32_t>(sheroes::g_stick_response, 2)) {
+        float x = p.lx / 32767.0f, y = p.ly / 32767.0f, m = std::sqrt(x * x + y * y);
+        if (m > 1e-4f) {
+            float k = std::pow(std::min(m, 1.0f), curve == 1 ? 1.5f : 2.0f) / m;
+            p.lx = int16_t(std::clamp(x * k * 32767.0f, -32767.0f, 32767.0f));
+            p.ly = int16_t(std::clamp(y * k * 32767.0f, -32767.0f, 32767.0f));
         }
     }
     if (sheroes::g_invert_x) p.rx = int16_t(p.rx == -32768 ? 32767 : -p.rx);

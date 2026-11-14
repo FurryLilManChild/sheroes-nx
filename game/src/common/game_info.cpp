@@ -10,6 +10,7 @@ namespace sheroes {
 // the Switch port menu's settings (switch/menu.cpp), kept in the settings file
 uint32_t g_button_map = 0;  // 0: as buttons_by_name; else 8 nibbles, each a Switch button slot + 1
 bool g_invert_x = false, g_invert_y = false, g_fps_counter = false;
+uint32_t g_stick_response = 0;  // left stick: 0 linear, 1 gentle, 2 gentler (Mark, 2026-11-13: Sonic felt touchy)
 void ScriptPad(int port, input::Pad& pad);  // pad_script.cpp
 }
 
@@ -27,6 +28,7 @@ const app::GameInfo app::kGame = {
                 {"invert_camera_x", &sheroes::g_invert_x, nullptr},
                 {"invert_camera_y", &sheroes::g_invert_y, nullptr},
                 {"fps_counter", &sheroes::g_fps_counter, nullptr},
+                {"stick_response", nullptr, &sheroes::g_stick_response},
                 {"music_volume", nullptr, &xdk::g_music_pct},
                 {"effects_volume", nullptr, &xdk::g_effects_pct}},  // game settings kept in the settings file
     .load = nullptr,                      // reads more from the settings file's toml::table
